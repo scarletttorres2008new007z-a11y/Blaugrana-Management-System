@@ -31,14 +31,19 @@ public final class ConexionBD {
     public static Connection getConexion() throws SQLException {
         String host = PROPIEDADES.getProperty("db.host", "localhost");
         String puerto = PROPIEDADES.getProperty("db.port", "1433");
+        String instancia = PROPIEDADES.getProperty("db.instancia", "").trim();
         String nombreBd = PROPIEDADES.getProperty("db.nombre", "BlaugranaDB");
         String usuario = PROPIEDADES.getProperty("db.usuario", "sa");
         String contrasena = PROPIEDADES.getProperty("db.contrasena", "");
         String encrypt = PROPIEDADES.getProperty("db.encrypt", "false");
 
+        // Si se configura una instancia con nombre (ej. SQLEXPRESS), se omite el
+        // puerto y se resuelve mediante el servicio SQL Server Browser (UDP 1434).
+        String servidor = instancia.isEmpty() ? host + ":" + puerto : host + "\\" + instancia;
+
         String url = String.format(
-                "jdbc:sqlserver://%s:%s;databaseName=%s;encrypt=%s;trustServerCertificate=true",
-                host, puerto, nombreBd, encrypt);
+                "jdbc:sqlserver://%s;databaseName=%s;encrypt=%s;trustServerCertificate=true",
+                servidor, nombreBd, encrypt);
 
         return DriverManager.getConnection(url, usuario, contrasena);
     }
