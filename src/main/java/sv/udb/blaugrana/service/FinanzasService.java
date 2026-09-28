@@ -71,4 +71,12 @@ public class FinanzasService {
     public BigDecimal balance() throws SQLException {
         return totalIngresos().subtract(totalEgresos());
     }
+
+    public BigDecimal ingresosMesActual() throws SQLException {
+        return ingresoDAO.sumarMesActual();
+    }
+
+    public BigDecimal egresosMesActual() throws SQLException {
+        return egresoDAO.sumarMesActual();
+    }
 }

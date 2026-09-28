@@ -70,6 +70,42 @@ public class PartidoDAO {
         }
     }
 
+    public int contarProgramados() throws SQLException {
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement("SELECT COUNT(*) FROM PARTIDO WHERE estado = 'PROGRAMADO'");
+             ResultSet rs = ps.executeQuery()) {
+            return rs.next() ? rs.getInt(1) : 0;
+        }
+    }
+
+    public int contarPorResultado(String resultado) throws SQLException {
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement(
+                     "SELECT COUNT(*) FROM PARTIDO WHERE estado = 'FINALIZADO' AND resultado = ?")) {
+            ps.setString(1, resultado);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    public int sumarGolesFavor() throws SQLException {
+        return sumarColumna("goles_favor");
+    }
+
+    public int sumarGolesContra() throws SQLException {
+        return sumarColumna("goles_contra");
+    }
+
+    private int sumarColumna(String columna) throws SQLException {
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement(
+                     "SELECT ISNULL(SUM(" + columna + "), 0) FROM PARTIDO WHERE estado = 'FINALIZADO'");
+             ResultSet rs = ps.executeQuery()) {
+            return rs.next() ? rs.getInt(1) : 0;
+        }
+    }
+
     public void insertar(Partido partido) throws SQLException {
         String sql = "INSERT INTO PARTIDO (competicion, fecha, rival, condicion, goles_favor, goles_contra, " +
                 "resultado, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";

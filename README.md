@@ -166,6 +166,31 @@ modifican o eliminan información quedan deshabilitados.
   tienen un campo de búsqueda que filtra las filas en tiempo real, sin
   distinguir mayúsculas/minúsculas ni acentos.
 
+## Interfaz
+
+- **Dashboard ampliado**: además de las tarjetas de plantilla/contratos/
+  partidos, muestra desempeño deportivo (victorias, empates, derrotas,
+  goles a favor/en contra), situación financiera del mes (ingresos,
+  egresos, nómina mensual, pagos pendientes), un panel de **alertas**
+  (contratos por vencer en los próximos 60 días, pagos pendientes,
+  próximos partidos) y un gráfico de la plantilla por posición.
+- **Ficha del jugador**: el botón "Ver perfil" en *Jugadores* abre una
+  ventana con el contrato vigente, el rendimiento acumulado (partidos,
+  minutos, goles, asistencias) y el total de bonificaciones del jugador.
+- **Gráficos sin dependencias externas**: `util.graficos.GraficoBarras` es
+  un componente Swing propio (Java2D) que dibuja barras horizontales; se
+  usa en el Dashboard y como vista alternativa en los reportes categóricos
+  (plantilla por posición, bonificaciones por jugador, ingresos/egresos
+  por categoría — casilla "Ver como gráfico").
+- **Exportar e imprimir reportes**: el módulo *Reportes* permite exportar
+  la tabla mostrada a **CSV** (se abre directamente en Excel) y usar
+  **Imprimir**, que abre el diálogo de impresión nativo de Windows — ahí
+  se puede elegir "Microsoft Print to PDF" para obtener un PDF, sin
+  necesidad de ninguna librería adicional en el proyecto.
+- **Tablas ordenables y filtrables**: al hacer clic en el encabezado de
+  cualquier columna de las tablas principales se ordena por esa columna
+  (`TableRowSorter`, el mismo mecanismo que habilita la búsqueda en vivo).
+
 ## Integridad de datos (`06_mejoras_integridad.sql`)
 
 - Un jugador no puede tener dos contratos `VIGENTE` al mismo tiempo, ni dos

@@ -39,6 +39,16 @@ public class EgresoDAO {
         }
     }
 
+    public BigDecimal sumarMesActual() throws SQLException {
+        String sql = "SELECT ISNULL(SUM(monto), 0) FROM EGRESO " +
+                "WHERE YEAR(fecha) = YEAR(GETDATE()) AND MONTH(fecha) = MONTH(GETDATE())";
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            return rs.next() ? rs.getBigDecimal(1) : BigDecimal.ZERO;
+        }
+    }
+
     public void insertar(Egreso egreso) throws SQLException {
         try (Connection con = ConexionBD.getConexion()) {
             insertar(con, egreso);

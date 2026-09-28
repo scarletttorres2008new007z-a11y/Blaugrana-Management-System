@@ -39,6 +39,23 @@ public class PagoDAO {
         return Optional.empty();
     }
 
+    public int contarPendientes() throws SQLException {
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement("SELECT COUNT(*) FROM PAGO WHERE estado = 'PENDIENTE'");
+             ResultSet rs = ps.executeQuery()) {
+            return rs.next() ? rs.getInt(1) : 0;
+        }
+    }
+
+    public java.math.BigDecimal sumarPendientes() throws SQLException {
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement(
+                     "SELECT ISNULL(SUM(total), 0) FROM PAGO WHERE estado = 'PENDIENTE'");
+             ResultSet rs = ps.executeQuery()) {
+            return rs.next() ? rs.getBigDecimal(1) : java.math.BigDecimal.ZERO;
+        }
+    }
+
     public boolean existePagoPorJugadorYPeriodo(int idJugador, String periodo) throws SQLException {
         try (Connection con = ConexionBD.getConexion();
              PreparedStatement ps = con.prepareStatement(

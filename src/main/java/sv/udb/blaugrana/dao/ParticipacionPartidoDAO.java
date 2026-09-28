@@ -57,6 +57,21 @@ public class ParticipacionPartidoDAO {
         return sumarColumnaPorJugador("asistencias", idJugador);
     }
 
+    public int sumarMinutosPorJugador(int idJugador) throws SQLException {
+        return sumarColumnaPorJugador("minutos_jugados", idJugador);
+    }
+
+    public int contarPartidosPorJugador(int idJugador) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM PARTICIPACION_PARTIDO WHERE id_jugador = ?";
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idJugador);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
     private int sumarColumnaPorJugador(String columna, int idJugador) throws SQLException {
         String sql = "SELECT ISNULL(SUM(" + columna + "), 0) FROM PARTICIPACION_PARTIDO WHERE id_jugador = ?";
         try (Connection con = ConexionBD.getConexion();

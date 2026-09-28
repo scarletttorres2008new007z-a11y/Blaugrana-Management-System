@@ -97,11 +97,13 @@ public class JugadoresPanel extends JPanel implements Refrescable {
         JButton btnNuevo = new JButton("Nuevo");
         JButton btnGuardar = new JButton("Guardar");
         JButton btnEliminar = new JButton("Eliminar");
+        JButton btnVerPerfil = new JButton("Ver perfil");
         JButton btnRefrescar = new JButton("Refrescar");
 
         btnNuevo.addActionListener(e -> limpiarFormulario());
         btnGuardar.addActionListener(e -> guardar());
         btnEliminar.addActionListener(e -> eliminar());
+        btnVerPerfil.addActionListener(e -> verPerfil());
         btnRefrescar.addActionListener(e -> refrescar());
         PermisosUI.deshabilitarSiSoloLectura(btnGuardar, btnEliminar);
 
@@ -109,6 +111,7 @@ public class JugadoresPanel extends JPanel implements Refrescable {
         panelBotones.add(btnNuevo);
         panelBotones.add(btnGuardar);
         panelBotones.add(btnEliminar);
+        panelBotones.add(btnVerPerfil);
         panelBotones.add(btnRefrescar);
 
         gbc.gridx = 0;
@@ -219,6 +222,24 @@ public class JugadoresPanel extends JPanel implements Refrescable {
             refrescar();
         } catch (SQLException e) {
             Mensajes.error(this, "No se pudo eliminar el jugador", e);
+        }
+    }
+
+    private void verPerfil() {
+        if (idSeleccionado == null) {
+            Mensajes.error(this, "Seleccione un jugador de la tabla.");
+            return;
+        }
+        try {
+            jugadorService.buscarPorId(idSeleccionado).ifPresentOrElse(
+                    jugador -> {
+                        Frame ventana = (Frame) SwingUtilities.getWindowAncestor(this);
+                        new PerfilJugadorDialog(ventana, jugador).setVisible(true);
+                    },
+                    () -> Mensajes.error(this, "El jugador seleccionado ya no existe.")
+            );
+        } catch (SQLException e) {
+            Mensajes.error(this, "No se pudo cargar el perfil del jugador", e);
         }
     }
 

@@ -72,6 +72,16 @@ public class BonificacionDAO {
         }
     }
 
+    public BigDecimal sumarMesActual() throws SQLException {
+        String sql = "SELECT ISNULL(SUM(valor), 0) FROM BONIFICACION " +
+                "WHERE YEAR(fecha_generacion) = YEAR(GETDATE()) AND MONTH(fecha_generacion) = MONTH(GETDATE())";
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            return rs.next() ? rs.getBigDecimal(1) : BigDecimal.ZERO;
+        }
+    }
+
     public BigDecimal sumarPorJugadorYPeriodo(int idJugador, String periodoAnioMes) throws SQLException {
         String sql = "SELECT ISNULL(SUM(valor), 0) FROM BONIFICACION " +
                 "WHERE id_jugador = ? AND LEFT(CONVERT(varchar(10), fecha_generacion, 120), 7) = ?";

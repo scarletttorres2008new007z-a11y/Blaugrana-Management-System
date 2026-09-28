@@ -38,6 +38,14 @@ public class PagoService {
         return pagoDAO.listarPorJugador(idJugador);
     }
 
+    public int contarPendientes() throws SQLException {
+        return pagoDAO.contarPendientes();
+    }
+
+    public BigDecimal sumarPendientes() throws SQLException {
+        return pagoDAO.sumarPendientes();
+    }
+
     /**
      * Calcula el pago de un jugador para un periodo (formato "yyyy-MM") a
      * partir de su contrato vigente y las bonificaciones de ese periodo.

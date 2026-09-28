@@ -27,6 +27,30 @@ public class PartidoService {
         return partidoDAO.contarFinalizados();
     }
 
+    public int contarProgramados() throws SQLException {
+        return partidoDAO.contarProgramados();
+    }
+
+    public int contarGanados() throws SQLException {
+        return partidoDAO.contarPorResultado(Partido.RESULTADO_GANADO);
+    }
+
+    public int contarEmpatados() throws SQLException {
+        return partidoDAO.contarPorResultado(Partido.RESULTADO_EMPATADO);
+    }
+
+    public int contarPerdidos() throws SQLException {
+        return partidoDAO.contarPorResultado(Partido.RESULTADO_PERDIDO);
+    }
+
+    public int sumarGolesFavor() throws SQLException {
+        return partidoDAO.sumarGolesFavor();
+    }
+
+    public int sumarGolesContra() throws SQLException {
+        return partidoDAO.sumarGolesContra();
+    }
+
     public void guardar(Partido partido) throws SQLException {
         if (Partido.ESTADO_FINALIZADO.equals(partido.getEstado())) {
             calcularResultado(partido);

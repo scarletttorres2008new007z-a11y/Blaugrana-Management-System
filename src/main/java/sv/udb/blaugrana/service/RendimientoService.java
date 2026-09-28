@@ -22,6 +22,14 @@ public class RendimientoService {
         return participacionDAO.sumarAsistenciasPorJugador(idJugador);
     }
 
+    public int minutosAcumulados(int idJugador) throws SQLException {
+        return participacionDAO.sumarMinutosPorJugador(idJugador);
+    }
+
+    public int partidosJugados(int idJugador) throws SQLException {
+        return participacionDAO.contarPartidosPorJugador(idJugador);
+    }
+
     public void guardar(ParticipacionPartido participacion) throws SQLException {
         if (participacion.getIdParticipacion() == 0) {
             if (participacionDAO.existeParticipacion(participacion.getIdPartido(), participacion.getIdJugador())) {

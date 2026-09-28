@@ -83,6 +83,27 @@ public class ContratoDAO {
         }
     }
 
+    public BigDecimal sumarNominaMensualVigente() throws SQLException {
+        String sql = "SELECT ISNULL(SUM(salario_base), 0) / 12 FROM CONTRATO WHERE estado = 'VIGENTE'";
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            return rs.next() ? rs.getBigDecimal(1) : BigDecimal.ZERO;
+        }
+    }
+
+    public int contarPorVencerEnDias(int dias) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM CONTRATO WHERE estado = 'VIGENTE' " +
+                "AND fecha_fin BETWEEN CAST(GETDATE() AS DATE) AND DATEADD(DAY, ?, CAST(GETDATE() AS DATE))";
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, dias);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
     public void insertar(Contrato contrato) throws SQLException {
         String sql = "INSERT INTO CONTRATO (id_jugador, fecha_inicio, fecha_fin, salario_base, condiciones, estado) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";

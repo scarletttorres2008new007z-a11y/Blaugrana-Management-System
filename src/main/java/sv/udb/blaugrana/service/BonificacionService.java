@@ -48,6 +48,10 @@ public class BonificacionService {
         return bonificacionDAO.sumarPorJugadorYPeriodo(idJugador, periodoAnioMes);
     }
 
+    public BigDecimal totalMesActual() throws SQLException {
+        return bonificacionDAO.sumarMesActual();
+    }
+
     public void eliminar(int idBonificacion) throws SQLException {
         bonificacionDAO.eliminar(idBonificacion);
     }

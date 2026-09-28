@@ -3,6 +3,7 @@ package sv.udb.blaugrana.service;
 import sv.udb.blaugrana.dao.ContratoDAO;
 import sv.udb.blaugrana.model.Contrato;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +26,14 @@ public class ContratoService {
 
     public int contarVigentes() throws SQLException {
         return contratoDAO.contarVigentes();
+    }
+
+    public BigDecimal nominaMensual() throws SQLException {
+        return contratoDAO.sumarNominaMensualVigente();
+    }
+
+    public int contarPorVencer(int dias) throws SQLException {
+        return contratoDAO.contarPorVencerEnDias(dias);
     }
 
     public void guardar(Contrato contrato) throws SQLException {

@@ -39,6 +39,16 @@ public class IngresoDAO {
         }
     }
 
+    public BigDecimal sumarMesActual() throws SQLException {
+        String sql = "SELECT ISNULL(SUM(monto), 0) FROM INGRESO " +
+                "WHERE YEAR(fecha) = YEAR(GETDATE()) AND MONTH(fecha) = MONTH(GETDATE())";
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            return rs.next() ? rs.getBigDecimal(1) : BigDecimal.ZERO;
+        }
+    }
+
     public void insertar(Ingreso ingreso) throws SQLException {
         String sql = "INSERT INTO INGRESO (id_categoria_ingreso, descripcion, monto, fecha) VALUES (?, ?, ?, ?)";
         try (Connection con = ConexionBD.getConexion();
