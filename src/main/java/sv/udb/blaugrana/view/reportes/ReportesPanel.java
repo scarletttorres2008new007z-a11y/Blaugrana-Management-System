@@ -4,9 +4,12 @@ import sv.udb.blaugrana.service.ReporteService;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
 import sv.udb.blaugrana.util.CsvExporter;
 import sv.udb.blaugrana.util.Impresion;
+import sv.udb.blaugrana.util.Medidas;
 import sv.udb.blaugrana.util.Mensajes;
+import sv.udb.blaugrana.util.Tipografia;
 import sv.udb.blaugrana.util.graficos.GraficoBarras;
 import sv.udb.blaugrana.view.Refrescable;
+import sv.udb.blaugrana.view.componentes.EncabezadoSeccion;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -14,25 +17,43 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Consultas de club, deportivo y finanzas, organizadas primero por
+ * categoria y luego por tipo de reporte dentro de ella.
+ */
 public class ReportesPanel extends JPanel implements Refrescable {
 
     private final ReporteService reporteService = new ReporteService();
 
-    private static final String[] TIPOS_REPORTE = {
-            "Reporte de plantilla por posicion",
-            "Reporte de contratos vigentes",
-            "Reporte deportivo (resultados)",
-            "Reporte de rendimiento por jugador",
-            "Reporte de bonificaciones por jugador",
-            "Reporte de pagos por periodo",
-            "Reporte de ingresos por categoria",
-            "Reporte de egresos por categoria",
-            "Reporte de balance general",
-            "Reporte presupuestario"
-    };
+    /** Etiqueta de un reporte junto con su indice original (usado en el switch de generarReporte). */
+    private record OpcionReporte(String etiqueta, int indice) {
+        @Override
+        public String toString() {
+            return etiqueta;
+        }
+    }
+
+    private static final Map<String, List<OpcionReporte>> REPORTES_POR_CATEGORIA = new LinkedHashMap<>();
+
+    static {
+        REPORTES_POR_CATEGORIA.put("Club", List.of(
+                new OpcionReporte("Plantilla por posición", 0),
+                new OpcionReporte("Contratos vigentes", 1)));
+        REPORTES_POR_CATEGORIA.put("Deportivo", List.of(
+                new OpcionReporte("Resultados de partidos", 2),
+                new OpcionReporte("Rendimiento por jugador", 3),
+                new OpcionReporte("Bonificaciones por jugador", 4)));
+        REPORTES_POR_CATEGORIA.put("Financiero", List.of(
+                new OpcionReporte("Pagos por periodo", 5),
+                new OpcionReporte("Ingresos por categoría", 6),
+                new OpcionReporte("Egresos por categoría", 7),
+                new OpcionReporte("Balance general", 8),
+                new OpcionReporte("Presupuestario", 9)));
+    }
 
     /** Indice de reporte -> {columna de etiqueta, columna de valor} para graficarlo. */
     private static final Map<Integer, int[]> REPORTES_GRAFICABLES = Map.of(
@@ -42,7 +63,8 @@ public class ReportesPanel extends JPanel implements Refrescable {
             7, new int[]{0, 1}
     );
 
-    private final JComboBox<String> cmbTipoReporte = new JComboBox<>(TIPOS_REPORTE);
+    private final JComboBox<String> cmbCategoria = new JComboBox<>(REPORTES_POR_CATEGORIA.keySet().toArray(new String[0]));
+    private final JComboBox<OpcionReporte> cmbTipoReporte = new JComboBox<>();
     private final DefaultTableModel modeloTabla = new DefaultTableModel();
     private final JTable tabla = new JTable(modeloTabla);
     private final GraficoBarras grafico = new GraficoBarras();
@@ -53,47 +75,86 @@ public class ReportesPanel extends JPanel implements Refrescable {
 
     public ReportesPanel() {
         setLayout(new BorderLayout());
-        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBackground(ColoresBlaugrana.GRIS_CLARO);
+        setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        JLabel titulo = new JLabel("REPORTES - Consultas de club, deportivo y finanzas");
-        titulo.setFont(new Font("SansSerif", Font.BOLD, 18));
-        titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
+        add(construirEncabezado(), BorderLayout.NORTH);
 
-        JPanel selector = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        selector.add(new JLabel("Tipo de reporte:"));
-        selector.add(cmbTipoReporte);
+        tabla.setRowHeight(24);
+
+        JPanel contenedorContenido = new JPanel(new BorderLayout());
+        contenedorContenido.setBackground(ColoresBlaugrana.BLANCO);
+        contenedorContenido.setBorder(BorderFactory.createLineBorder(ColoresBlaugrana.GRIS_MEDIO, 1));
+        panelContenido.setOpaque(false);
+        panelContenido.add(new JScrollPane(tabla), "tabla");
+        panelContenido.add(new JScrollPane(grafico), "grafico");
+        contenedorContenido.add(panelContenido, BorderLayout.CENTER);
+
+        add(contenedorContenido, BorderLayout.CENTER);
+
+        cmbCategoria.addActionListener(e -> actualizarOpcionesReporte());
+        actualizarOpcionesReporte();
+    }
+
+    private JPanel construirEncabezado() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+        panel.add(new EncabezadoSeccion("Reportes", "Consultas de club, deportivo y finanzas"), BorderLayout.NORTH);
+
+        JPanel selector = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6));
+        selector.setOpaque(false);
+        selector.setBorder(new EmptyBorder(0, 0, Medidas.PADDING_SECCION, 0));
+
+        JLabel lblCategoria = new JLabel("Categoria:");
+        lblCategoria.setFont(Tipografia.CUERPO);
+        JLabel lblTipo = new JLabel("Reporte:");
+        lblTipo.setFont(Tipografia.CUERPO);
+
         JButton btnGenerar = new JButton("Generar reporte");
         btnGenerar.addActionListener(e -> generarReporte());
-        selector.add(btnGenerar);
+
+        chkVerGrafico.setOpaque(false);
         chkVerGrafico.setEnabled(false);
         chkVerGrafico.addActionListener(e -> actualizarVista());
-        selector.add(chkVerGrafico);
 
         JButton btnExportar = new JButton("Exportar CSV");
         btnExportar.addActionListener(e -> CsvExporter.exportarTabla(this,
-                (String) cmbTipoReporte.getSelectedItem() + ".csv", tabla));
-        selector.add(btnExportar);
+                cmbTipoReporte.getSelectedItem() + ".csv", tabla));
 
         JButton btnImprimir = new JButton("Imprimir");
         btnImprimir.addActionListener(e -> Impresion.imprimirTabla(this, tabla,
                 String.valueOf(cmbTipoReporte.getSelectedItem())));
+
+        selector.add(lblCategoria);
+        selector.add(cmbCategoria);
+        selector.add(lblTipo);
+        selector.add(cmbTipoReporte);
+        selector.add(btnGenerar);
+        selector.add(chkVerGrafico);
+        selector.add(btnExportar);
         selector.add(btnImprimir);
 
-        tabla.setRowHeight(24);
+        panel.add(selector, BorderLayout.SOUTH);
+        return panel;
+    }
 
-        JPanel norte = new JPanel(new BorderLayout());
-        norte.add(titulo, BorderLayout.NORTH);
-        norte.add(selector, BorderLayout.SOUTH);
-
-        panelContenido.add(new JScrollPane(tabla), "tabla");
-        panelContenido.add(new JScrollPane(grafico), "grafico");
-
-        add(norte, BorderLayout.NORTH);
-        add(panelContenido, BorderLayout.CENTER);
+    private void actualizarOpcionesReporte() {
+        String categoria = (String) cmbCategoria.getSelectedItem();
+        cmbTipoReporte.removeAllItems();
+        if (categoria == null) {
+            return;
+        }
+        for (OpcionReporte opcion : REPORTES_POR_CATEGORIA.get(categoria)) {
+            cmbTipoReporte.addItem(opcion);
+        }
     }
 
     private void generarReporte() {
-        int indice = cmbTipoReporte.getSelectedIndex();
+        OpcionReporte opcion = (OpcionReporte) cmbTipoReporte.getSelectedItem();
+        if (opcion == null) {
+            return;
+        }
+        int indice = opcion.indice();
         try {
             switch (indice) {
                 case 0 -> mostrar(new String[]{"Posicion", "Total jugadores"}, reporteService.reportePlantillaPorPosicion());

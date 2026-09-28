@@ -5,15 +5,20 @@ import sv.udb.blaugrana.model.Presupuesto;
 import sv.udb.blaugrana.service.PresupuestoService;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
 import sv.udb.blaugrana.util.FormatoMoneda;
+import sv.udb.blaugrana.util.Medidas;
 import sv.udb.blaugrana.util.Mensajes;
 import sv.udb.blaugrana.util.PermisosUI;
+import sv.udb.blaugrana.util.Tipografia;
 import sv.udb.blaugrana.util.Validaciones;
 import sv.udb.blaugrana.view.Refrescable;
+import sv.udb.blaugrana.view.componentes.EncabezadoSeccion;
+import sv.udb.blaugrana.view.componentes.TarjetaEstadistica;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -37,33 +42,70 @@ public class PresupuestoPanel extends JPanel implements Refrescable {
     private final JTextField txtPresupuestado = new JTextField(10);
     private final JTextField txtEjecutado = new JTextField(10);
 
+    private final TarjetaEstadistica tarjetaPresupuestado =
+            new TarjetaEstadistica("Presupuestado", "$0.00", ColoresBlaugrana.AZUL_OSCURO, Tipografia.DATO_MEDIANO);
+    private final TarjetaEstadistica tarjetaEjecutado =
+            new TarjetaEstadistica("Ejecutado", "$0.00", ColoresBlaugrana.GRANATE, Tipografia.DATO_MEDIANO);
+    private final TarjetaEstadistica tarjetaDisponible =
+            new TarjetaEstadistica("Disponible", "$0.00", ColoresBlaugrana.VERDE_ACTIVO, Tipografia.DATO_MEDIANO);
+
     public PresupuestoPanel() {
         setLayout(new BorderLayout());
-        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBackground(ColoresBlaugrana.GRIS_CLARO);
+        setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        JLabel titulo = new JLabel("PRESUPUESTO - Planificacion financiera por temporada");
-        titulo.setFont(new Font("SansSerif", Font.BOLD, 18));
-        titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
-        add(titulo, BorderLayout.NORTH);
-
-        JPanel selector = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        selector.add(new JLabel("Presupuesto:"));
-        selector.add(cmbPresupuesto);
-        cmbPresupuesto.addActionListener(e -> cargarDetalle());
+        add(construirEncabezado(), BorderLayout.NORTH);
 
         tabla.setRowHeight(24);
 
-        JPanel centro = new JPanel(new BorderLayout());
-        centro.add(selector, BorderLayout.NORTH);
-        centro.add(new JScrollPane(tabla), BorderLayout.CENTER);
+        JPanel centro = new JPanel(new BorderLayout(0, Medidas.ESPACIO_ENTRE_TARJETAS));
+        centro.setOpaque(false);
+        centro.add(construirFilaResumen(), BorderLayout.NORTH);
+        JPanel contenedorTabla = new JPanel(new BorderLayout());
+        contenedorTabla.setBackground(ColoresBlaugrana.BLANCO);
+        contenedorTabla.setBorder(BorderFactory.createLineBorder(ColoresBlaugrana.GRIS_MEDIO, 1));
+        contenedorTabla.add(new JScrollPane(tabla), BorderLayout.CENTER);
+        centro.add(contenedorTabla, BorderLayout.CENTER);
 
         add(centro, BorderLayout.CENTER);
         add(construirFormulario(), BorderLayout.SOUTH);
+
+        cmbPresupuesto.addActionListener(e -> cargarDetalle());
+    }
+
+    private JPanel construirEncabezado() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+        panel.add(new EncabezadoSeccion("Presupuesto", "Planificación financiera por temporada"), BorderLayout.NORTH);
+
+        JPanel selector = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        selector.setOpaque(false);
+        selector.setBorder(new EmptyBorder(0, 0, Medidas.PADDING_SECCION, 0));
+        JLabel lblPresupuesto = new JLabel("Presupuesto:");
+        lblPresupuesto.setFont(Tipografia.CUERPO);
+        lblPresupuesto.setForeground(ColoresBlaugrana.GRIS_TEXTO);
+        selector.add(lblPresupuesto);
+        selector.add(cmbPresupuesto);
+        panel.add(selector, BorderLayout.SOUTH);
+        return panel;
+    }
+
+    private JPanel construirFilaResumen() {
+        JPanel fila = new JPanel(new GridLayout(1, 3, Medidas.ESPACIO_ENTRE_TARJETAS, Medidas.ESPACIO_ENTRE_TARJETAS));
+        fila.setOpaque(false);
+        fila.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+        fila.add(tarjetaPresupuestado);
+        fila.add(tarjetaEjecutado);
+        fila.add(tarjetaDisponible);
+        return fila;
     }
 
     private JPanel construirFormulario() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("Nuevo presupuesto / detalle"));
+        panel.setBackground(ColoresBlaugrana.BLANCO);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ColoresBlaugrana.GRIS_MEDIO, 1),
+                BorderFactory.createTitledBorder("Nuevo presupuesto / detalle")));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(4, 4, 4, 4);
         gbc.anchor = GridBagConstraints.WEST;
@@ -88,6 +130,7 @@ public class PresupuestoPanel extends JPanel implements Refrescable {
         btnRefrescar.addActionListener(e -> refrescar());
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        panelBotones.setOpaque(false);
         panelBotones.add(btnAgregarDetalle);
         panelBotones.add(btnRefrescar);
 
@@ -158,6 +201,7 @@ public class PresupuestoPanel extends JPanel implements Refrescable {
         modeloTabla.setRowCount(0);
         Presupuesto presupuesto = (Presupuesto) cmbPresupuesto.getSelectedItem();
         if (presupuesto == null) {
+            actualizarResumen(List.of());
             return;
         }
         try {
@@ -167,9 +211,24 @@ public class PresupuestoPanel extends JPanel implements Refrescable {
                         FormatoMoneda.formatear(d.getMontoPresupuestado()), FormatoMoneda.formatear(d.getMontoEjecutado()),
                         FormatoMoneda.formatear(d.getDisponible())});
             }
+            actualizarResumen(detalles);
         } catch (SQLException e) {
             Mensajes.error(this, "No se pudo cargar el detalle del presupuesto", e);
         }
+    }
+
+    private void actualizarResumen(List<DetallePresupuesto> detalles) {
+        BigDecimal presupuestado = BigDecimal.ZERO;
+        BigDecimal ejecutado = BigDecimal.ZERO;
+        BigDecimal disponible = BigDecimal.ZERO;
+        for (DetallePresupuesto d : detalles) {
+            presupuestado = presupuestado.add(d.getMontoPresupuestado());
+            ejecutado = ejecutado.add(d.getMontoEjecutado());
+            disponible = disponible.add(d.getDisponible());
+        }
+        tarjetaPresupuestado.setValor(FormatoMoneda.formatear(presupuestado));
+        tarjetaEjecutado.setValor(FormatoMoneda.formatear(ejecutado));
+        tarjetaDisponible.setValor(FormatoMoneda.formatear(disponible));
     }
 
     @Override

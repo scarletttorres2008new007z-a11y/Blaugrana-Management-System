@@ -4,34 +4,47 @@ import sv.udb.blaugrana.model.Partido;
 import sv.udb.blaugrana.service.BonificacionService;
 import sv.udb.blaugrana.service.PartidoService;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
-import sv.udb.blaugrana.util.FiltroTabla;
+import sv.udb.blaugrana.util.Medidas;
 import sv.udb.blaugrana.util.Mensajes;
 import sv.udb.blaugrana.util.PermisosUI;
+import sv.udb.blaugrana.util.Tipografia;
 import sv.udb.blaugrana.util.Validaciones;
 import sv.udb.blaugrana.view.Refrescable;
+import sv.udb.blaugrana.view.componentes.EncabezadoSeccion;
+import sv.udb.blaugrana.view.componentes.Insignia;
+import sv.udb.blaugrana.view.componentes.TarjetaPartido;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
-import javax.swing.table.DefaultTableModel;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.sql.SQLException;
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
+/**
+ * Calendario y resultados presentados como una lista de "match cards"
+ * (escudos, marcador o VS, competicion/fecha/resultado) en vez de una tabla
+ * plana, con seleccion por clic para editar en el formulario inferior.
+ */
 public class PartidosPanel extends JPanel implements Refrescable {
 
     private final PartidoService partidoService = new PartidoService();
     private final BonificacionService bonificacionService = new BonificacionService();
 
-    private final DefaultTableModel modeloTabla = new DefaultTableModel(
-            new Object[]{"ID", "Competicion", "Fecha", "Rival", "Condicion", "Marcador", "Resultado", "Estado"}, 0) {
-        @Override
-        public boolean isCellEditable(int row, int column) {
-            return false;
-        }
-    };
-    private final JTable tabla = new JTable(modeloTabla);
+    private final JPanel panelLista = new JPanel();
+    private final Map<Integer, TarjetaFilaPartido> tarjetasPorId = new LinkedHashMap<>();
+    private List<Partido> partidosCargados = new ArrayList<>();
+
     private final JTextField txtBuscar = new JTextField(20);
 
     private final JTextField txtCompeticion = new JTextField(16);
@@ -46,29 +59,53 @@ public class PartidosPanel extends JPanel implements Refrescable {
 
     public PartidosPanel() {
         setLayout(new BorderLayout());
-        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBackground(ColoresBlaugrana.GRIS_CLARO);
+        setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        JLabel titulo = new JLabel("PARTIDOS - Calendario y resultados de FC Barcelona");
-        titulo.setFont(new Font("SansSerif", Font.BOLD, 18));
-        titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
-        add(construirEncabezado(titulo), BorderLayout.NORTH);
+        add(construirEncabezado(), BorderLayout.NORTH);
 
-        tabla.setRowHeight(24);
-        tabla.getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                cargarSeleccion();
+        panelLista.setLayout(new BoxLayout(panelLista, BoxLayout.Y_AXIS));
+        panelLista.setOpaque(false);
+
+        JScrollPane scroll = new JScrollPane(panelLista);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
+        add(scroll, BorderLayout.CENTER);
+
+        add(construirFormulario(), BorderLayout.SOUTH);
+
+        txtBuscar.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                renderizarLista();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                renderizarLista();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                renderizarLista();
             }
         });
-        FiltroTabla.activarBusqueda(txtBuscar, tabla, modeloTabla);
-        add(new JScrollPane(tabla), BorderLayout.CENTER);
-        add(construirFormulario(), BorderLayout.SOUTH);
     }
 
-    private JPanel construirEncabezado(JLabel titulo) {
+    private JPanel construirEncabezado() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.add(titulo, BorderLayout.NORTH);
-        JPanel panelBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panelBusqueda.add(new JLabel("Buscar:"));
+        panel.setOpaque(false);
+        panel.add(new EncabezadoSeccion("Partidos", "Calendario y resultados de FC Barcelona"), BorderLayout.NORTH);
+
+        JPanel panelBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        panelBusqueda.setOpaque(false);
+        panelBusqueda.setBorder(new EmptyBorder(0, 0, Medidas.PADDING_SECCION, 0));
+        JLabel lblBuscar = new JLabel("Buscar:");
+        lblBuscar.setFont(Tipografia.CUERPO);
+        lblBuscar.setForeground(ColoresBlaugrana.GRIS_TEXTO);
+        panelBusqueda.add(lblBuscar);
         panelBusqueda.add(txtBuscar);
         panel.add(panelBusqueda, BorderLayout.SOUTH);
         return panel;
@@ -76,7 +113,10 @@ public class PartidosPanel extends JPanel implements Refrescable {
 
     private JPanel construirFormulario() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("Datos del partido"));
+        panel.setBackground(ColoresBlaugrana.BLANCO);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ColoresBlaugrana.GRIS_MEDIO, 1),
+                BorderFactory.createTitledBorder("Datos del partido")));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(4, 4, 4, 4);
         gbc.anchor = GridBagConstraints.WEST;
@@ -105,6 +145,7 @@ public class PartidosPanel extends JPanel implements Refrescable {
         PermisosUI.deshabilitarSiSoloLectura(btnGuardar, btnEliminar, btnGenerarBonificaciones);
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        panelBotones.setOpaque(false);
         panelBotones.add(btnNuevo);
         panelBotones.add(btnGuardar);
         panelBotones.add(btnEliminar);
@@ -127,14 +168,62 @@ public class PartidosPanel extends JPanel implements Refrescable {
         panel.add(campo, gbc);
     }
 
-    private void cargarSeleccion() {
-        int fila = tabla.getSelectedRow();
-        if (fila < 0) {
-            return;
+    private void renderizarLista() {
+        String filtro = normalizar(txtBuscar.getText());
+        panelLista.removeAll();
+        tarjetasPorId.clear();
+
+        for (Partido partido : partidosCargados) {
+            if (!filtro.isBlank() && !coincide(partido, filtro)) {
+                continue;
+            }
+            TarjetaFilaPartido tarjeta = new TarjetaFilaPartido(partido);
+            tarjeta.setSeleccionada(idSeleccionado != null && idSeleccionado == partido.getIdPartido());
+            tarjeta.setAlignmentX(Component.LEFT_ALIGNMENT);
+            tarjetasPorId.put(partido.getIdPartido(), tarjeta);
+            panelLista.add(tarjeta);
+            panelLista.add(Box.createVerticalStrut(Medidas.ESPACIO_ENTRE_TARJETAS));
         }
-        idSeleccionado = (Integer) modeloTabla.getValueAt(tabla.convertRowIndexToModel(fila), 0);
+
+        if (tarjetasPorId.isEmpty()) {
+            JLabel lblVacio = new JLabel("No se encontraron partidos.");
+            lblVacio.setFont(Tipografia.CUERPO);
+            lblVacio.setForeground(ColoresBlaugrana.GRIS_TEXTO_SUAVE);
+            lblVacio.setAlignmentX(Component.LEFT_ALIGNMENT);
+            panelLista.add(lblVacio);
+        }
+
+        panelLista.revalidate();
+        panelLista.repaint();
+    }
+
+    private boolean coincide(Partido partido, String filtroNormalizado) {
+        String texto = normalizar(String.join(" ",
+                partido.getCompeticion(),
+                String.valueOf(partido.getFecha()),
+                partido.getRival(),
+                String.valueOf(partido.getCondicion()),
+                String.valueOf(partido.getResultado()),
+                String.valueOf(partido.getEstado())));
+        return texto.contains(filtroNormalizado);
+    }
+
+    private String normalizar(String texto) {
+        if (texto == null) {
+            return "";
+        }
+        String sinAcentos = Normalizer.normalize(texto, Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        return sinAcentos.toLowerCase().trim();
+    }
+
+    private void seleccionarPartido(int idPartido) {
+        idSeleccionado = idPartido;
+        for (Map.Entry<Integer, TarjetaFilaPartido> entrada : tarjetasPorId.entrySet()) {
+            entrada.getValue().setSeleccionada(entrada.getKey() == idPartido);
+        }
         try {
-            partidoService.buscarPorId(idSeleccionado).ifPresent(p -> {
+            partidoService.buscarPorId(idPartido).ifPresent(p -> {
                 txtCompeticion.setText(p.getCompeticion());
                 txtFecha.setText(p.getFecha().toString());
                 txtRival.setText(p.getRival());
@@ -150,7 +239,9 @@ public class PartidosPanel extends JPanel implements Refrescable {
 
     private void limpiarFormulario() {
         idSeleccionado = null;
-        tabla.clearSelection();
+        for (TarjetaFilaPartido tarjeta : tarjetasPorId.values()) {
+            tarjeta.setSeleccionada(false);
+        }
         txtCompeticion.setText("");
         txtFecha.setText(LocalDate.now().toString());
         txtRival.setText("");
@@ -193,7 +284,7 @@ public class PartidosPanel extends JPanel implements Refrescable {
 
     private void eliminar() {
         if (idSeleccionado == null) {
-            Mensajes.error(this, "Seleccione un partido de la tabla.");
+            Mensajes.error(this, "Seleccione un partido de la lista.");
             return;
         }
         if (!Mensajes.confirmar(this, "¿Desea eliminar el partido seleccionado?")) {
@@ -210,7 +301,7 @@ public class PartidosPanel extends JPanel implements Refrescable {
 
     private void generarBonificaciones() {
         if (idSeleccionado == null) {
-            Mensajes.error(this, "Seleccione un partido finalizado de la tabla.");
+            Mensajes.error(this, "Seleccione un partido finalizado de la lista.");
             return;
         }
         try {
@@ -225,15 +316,75 @@ public class PartidosPanel extends JPanel implements Refrescable {
 
     @Override
     public void refrescar() {
-        modeloTabla.setRowCount(0);
         try {
-            List<Partido> partidos = partidoService.listar();
-            for (Partido p : partidos) {
-                modeloTabla.addRow(new Object[]{p.getIdPartido(), p.getCompeticion(), p.getFecha(), p.getRival(),
-                        p.getCondicion(), p.getMarcador(), p.getResultado(), p.getEstado()});
-            }
+            partidosCargados = partidoService.listar();
+            renderizarLista();
         } catch (SQLException e) {
             Mensajes.error(this, "No se pudo cargar los partidos", e);
+        }
+    }
+
+    /** Fila clicable con la tarjeta de partido, la insignia de estado y la condicion. */
+    private final class TarjetaFilaPartido extends JPanel {
+
+        TarjetaFilaPartido(Partido partido) {
+            setLayout(new BorderLayout(16, 0));
+            setBackground(ColoresBlaugrana.BLANCO);
+            setBorder(bordeNormal());
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
+
+            JPanel envoltorioTarjeta = new JPanel(new BorderLayout());
+            envoltorioTarjeta.setOpaque(false);
+            envoltorioTarjeta.setBorder(new EmptyBorder(Medidas.PADDING_TARJETA, Medidas.PADDING_TARJETA,
+                    Medidas.PADDING_TARJETA, 0));
+            envoltorioTarjeta.add(new TarjetaPartido(partido, false), BorderLayout.CENTER);
+
+            JPanel lateral = new JPanel();
+            lateral.setOpaque(false);
+            lateral.setLayout(new BoxLayout(lateral, BoxLayout.Y_AXIS));
+            lateral.setBorder(new EmptyBorder(Medidas.PADDING_TARJETA, 0, Medidas.PADDING_TARJETA,
+                    Medidas.PADDING_TARJETA));
+
+            JPanel filaInsignia = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+            filaInsignia.setOpaque(false);
+            filaInsignia.setAlignmentX(Component.RIGHT_ALIGNMENT);
+            filaInsignia.add(new Insignia(partido.getEstado()));
+
+            JLabel lblCondicion = new JLabel(
+                    Partido.CONDICION_LOCAL.equals(partido.getCondicion()) ? "Local" : "Visitante");
+            lblCondicion.setFont(Tipografia.NOTA);
+            lblCondicion.setForeground(ColoresBlaugrana.GRIS_TEXTO_SUAVE);
+            lblCondicion.setAlignmentX(Component.RIGHT_ALIGNMENT);
+            lblCondicion.setHorizontalAlignment(SwingConstants.RIGHT);
+
+            lateral.add(Box.createVerticalGlue());
+            lateral.add(filaInsignia);
+            lateral.add(Box.createVerticalStrut(6));
+            lateral.add(lblCondicion);
+            lateral.add(Box.createVerticalGlue());
+
+            add(envoltorioTarjeta, BorderLayout.CENTER);
+            add(lateral, BorderLayout.EAST);
+
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    seleccionarPartido(partido.getIdPartido());
+                }
+            });
+        }
+
+        void setSeleccionada(boolean seleccionada) {
+            setBorder(seleccionada ? bordeSeleccionado() : bordeNormal());
+        }
+
+        private Border bordeNormal() {
+            return BorderFactory.createLineBorder(ColoresBlaugrana.GRIS_MEDIO, 1);
+        }
+
+        private Border bordeSeleccionado() {
+            return BorderFactory.createLineBorder(ColoresBlaugrana.DORADO, 2);
         }
     }
 }

@@ -9,10 +9,14 @@ import sv.udb.blaugrana.service.PagoService;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
 import sv.udb.blaugrana.util.FiltroTabla;
 import sv.udb.blaugrana.util.FormatoMoneda;
+import sv.udb.blaugrana.util.Medidas;
 import sv.udb.blaugrana.util.Mensajes;
 import sv.udb.blaugrana.util.PermisosUI;
+import sv.udb.blaugrana.util.Tipografia;
 import sv.udb.blaugrana.util.Validaciones;
 import sv.udb.blaugrana.view.Refrescable;
+import sv.udb.blaugrana.view.componentes.EncabezadoSeccion;
+import sv.udb.blaugrana.view.componentes.RenderizadorInsignia;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -26,6 +30,8 @@ import java.util.List;
 import java.util.Optional;
 
 public class PagosPanel extends JPanel implements Refrescable {
+
+    private static final int COLUMNA_ESTADO = 7;
 
     private final PagoService pagoService = new PagoService();
     private final ContratoService contratoService = new ContratoService();
@@ -47,24 +53,32 @@ public class PagosPanel extends JPanel implements Refrescable {
 
     public PagosPanel() {
         setLayout(new BorderLayout());
-        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBackground(ColoresBlaugrana.GRIS_CLARO);
+        setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        JLabel titulo = new JLabel("PAGOS - Planilla de jugadores");
-        titulo.setFont(new Font("SansSerif", Font.BOLD, 18));
-        titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
-        add(construirEncabezado(titulo), BorderLayout.NORTH);
+        add(construirEncabezado(), BorderLayout.NORTH);
 
-        tabla.setRowHeight(24);
+        tabla.setRowHeight(28);
+        tabla.getColumnModel().getColumn(COLUMNA_ESTADO).setCellRenderer(new RenderizadorInsignia());
         FiltroTabla.activarBusqueda(txtBuscar, tabla, modeloTabla);
-        add(new JScrollPane(tabla), BorderLayout.CENTER);
+        JScrollPane scroll = new JScrollPane(tabla);
+        scroll.setBorder(BorderFactory.createLineBorder(ColoresBlaugrana.GRIS_MEDIO, 1));
+        add(scroll, BorderLayout.CENTER);
         add(construirFormulario(), BorderLayout.SOUTH);
     }
 
-    private JPanel construirEncabezado(JLabel titulo) {
+    private JPanel construirEncabezado() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.add(titulo, BorderLayout.NORTH);
-        JPanel panelBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panelBusqueda.add(new JLabel("Buscar:"));
+        panel.setOpaque(false);
+        panel.add(new EncabezadoSeccion("Pagos", "Planilla de jugadores"), BorderLayout.NORTH);
+
+        JPanel panelBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        panelBusqueda.setOpaque(false);
+        panelBusqueda.setBorder(new EmptyBorder(0, 0, Medidas.PADDING_SECCION, 0));
+        JLabel lblBuscar = new JLabel("Buscar:");
+        lblBuscar.setFont(Tipografia.CUERPO);
+        lblBuscar.setForeground(ColoresBlaugrana.GRIS_TEXTO);
+        panelBusqueda.add(lblBuscar);
         panelBusqueda.add(txtBuscar);
         panel.add(panelBusqueda, BorderLayout.SOUTH);
         return panel;
@@ -72,7 +86,10 @@ public class PagosPanel extends JPanel implements Refrescable {
 
     private JPanel construirFormulario() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("Generar pago"));
+        panel.setBackground(ColoresBlaugrana.BLANCO);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ColoresBlaugrana.GRIS_MEDIO, 1),
+                BorderFactory.createTitledBorder("Generar pago")));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(4, 4, 4, 4);
         gbc.anchor = GridBagConstraints.WEST;
@@ -93,6 +110,7 @@ public class PagosPanel extends JPanel implements Refrescable {
         PermisosUI.deshabilitarSiSoloLectura(btnGenerar, btnMarcarPagado, btnEliminar);
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        panelBotones.setOpaque(false);
         panelBotones.add(btnGenerar);
         panelBotones.add(btnMarcarPagado);
         panelBotones.add(btnEliminar);

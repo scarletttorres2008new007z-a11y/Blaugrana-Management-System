@@ -7,17 +7,28 @@ import sv.udb.blaugrana.service.JugadorService;
 import sv.udb.blaugrana.service.PartidoService;
 import sv.udb.blaugrana.service.RendimientoService;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
+import sv.udb.blaugrana.util.Medidas;
 import sv.udb.blaugrana.util.Mensajes;
 import sv.udb.blaugrana.util.PermisosUI;
+import sv.udb.blaugrana.util.Tipografia;
+import sv.udb.blaugrana.util.graficos.GraficoBarras;
 import sv.udb.blaugrana.view.Refrescable;
+import sv.udb.blaugrana.view.componentes.EncabezadoSeccion;
+import sv.udb.blaugrana.view.componentes.TarjetaEstadistica;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Participacion de jugadores por partido: resumen del encuentro mediante
+ * tarjetas de estadistica, tabla detallada por jugador y un grafico de
+ * minutos jugados, sin alterar la logica de RendimientoService.
+ */
 public class RendimientoPanel extends JPanel implements Refrescable {
 
     private final PartidoService partidoService = new PartidoService();
@@ -43,21 +54,38 @@ public class RendimientoPanel extends JPanel implements Refrescable {
     private final JTextField txtRojas = new JTextField(4);
     private final JCheckBox chkTitular = new JCheckBox("Titular");
 
+    private final TarjetaEstadistica tarjetaJugadoresUtilizados =
+            new TarjetaEstadistica("Jugadores utilizados", "0", ColoresBlaugrana.AZUL_OSCURO, Tipografia.DATO_MEDIANO);
+    private final TarjetaEstadistica tarjetaGolesPartido =
+            new TarjetaEstadistica("Goles del partido", "0", ColoresBlaugrana.GRANATE, Tipografia.DATO_MEDIANO);
+    private final TarjetaEstadistica tarjetaAsistenciasPartido =
+            new TarjetaEstadistica("Asistencias", "0", ColoresBlaugrana.AZUL_MEDIO, Tipografia.DATO_MEDIANO);
+    private final TarjetaEstadistica tarjetaTarjetasPartido =
+            new TarjetaEstadistica("Tarjetas mostradas", "0", ColoresBlaugrana.AMBAR_ALERTA, Tipografia.DATO_MEDIANO);
+
+    private final GraficoBarras graficoMinutos = new GraficoBarras();
+
     private Integer idSeleccionado;
 
     public RendimientoPanel() {
         setLayout(new BorderLayout());
-        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBackground(ColoresBlaugrana.GRIS_CLARO);
+        setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        JLabel titulo = new JLabel("RENDIMIENTO - Participacion de jugadores por partido");
-        titulo.setFont(new Font("SansSerif", Font.BOLD, 18));
-        titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
-        add(titulo, BorderLayout.NORTH);
+        add(construirEncabezado(), BorderLayout.NORTH);
 
-        JPanel selectorPartido = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        selectorPartido.add(new JLabel("Partido:"));
-        selectorPartido.add(cmbPartido);
-        cmbPartido.addActionListener(e -> cargarParticipaciones());
+        JPanel centro = new JPanel(new BorderLayout(0, Medidas.ESPACIO_ENTRE_TARJETAS));
+        centro.setOpaque(false);
+        centro.add(construirFilaResumen(), BorderLayout.NORTH);
+
+        JPanel filaTablaGrafico = new JPanel(new BorderLayout(Medidas.ESPACIO_ENTRE_TARJETAS, 0));
+        filaTablaGrafico.setOpaque(false);
+        filaTablaGrafico.add(construirTarjetaTabla(), BorderLayout.CENTER);
+        filaTablaGrafico.add(construirTarjetaGrafico(), BorderLayout.EAST);
+        centro.add(filaTablaGrafico, BorderLayout.CENTER);
+
+        add(centro, BorderLayout.CENTER);
+        add(construirFormulario(), BorderLayout.SOUTH);
 
         tabla.setRowHeight(24);
         tabla.getSelectionModel().addListSelectionListener(e -> {
@@ -65,18 +93,66 @@ public class RendimientoPanel extends JPanel implements Refrescable {
                 cargarSeleccion();
             }
         });
+        cmbPartido.addActionListener(e -> cargarParticipaciones());
+    }
 
-        JPanel centro = new JPanel(new BorderLayout());
-        centro.add(selectorPartido, BorderLayout.NORTH);
-        centro.add(new JScrollPane(tabla), BorderLayout.CENTER);
+    private JPanel construirEncabezado() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+        panel.add(new EncabezadoSeccion("Rendimiento", "Participación de jugadores por partido"), BorderLayout.NORTH);
 
-        add(centro, BorderLayout.CENTER);
-        add(construirFormulario(), BorderLayout.SOUTH);
+        JPanel selectorPartido = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        selectorPartido.setOpaque(false);
+        selectorPartido.setBorder(new EmptyBorder(0, 0, Medidas.PADDING_SECCION, 0));
+        JLabel lblPartido = new JLabel("Partido:");
+        lblPartido.setFont(Tipografia.CUERPO);
+        lblPartido.setForeground(ColoresBlaugrana.GRIS_TEXTO);
+        selectorPartido.add(lblPartido);
+        selectorPartido.add(cmbPartido);
+        panel.add(selectorPartido, BorderLayout.SOUTH);
+        return panel;
+    }
+
+    private JPanel construirFilaResumen() {
+        JPanel fila = new JPanel(new GridLayout(1, 4, Medidas.ESPACIO_ENTRE_TARJETAS, Medidas.ESPACIO_ENTRE_TARJETAS));
+        fila.setOpaque(false);
+        fila.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+        fila.add(tarjetaJugadoresUtilizados);
+        fila.add(tarjetaGolesPartido);
+        fila.add(tarjetaAsistenciasPartido);
+        fila.add(tarjetaTarjetasPartido);
+        return fila;
+    }
+
+    private JPanel construirTarjetaTabla() {
+        JPanel contenedor = new JPanel(new BorderLayout());
+        contenedor.setBackground(ColoresBlaugrana.BLANCO);
+        contenedor.setBorder(BorderFactory.createLineBorder(ColoresBlaugrana.GRIS_MEDIO, 1));
+        contenedor.add(new JScrollPane(tabla), BorderLayout.CENTER);
+        return contenedor;
+    }
+
+    private JPanel construirTarjetaGrafico() {
+        JPanel contenedor = new JPanel(new BorderLayout());
+        contenedor.setBackground(ColoresBlaugrana.BLANCO);
+        contenedor.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ColoresBlaugrana.GRIS_MEDIO, 1),
+                new EmptyBorder(Medidas.PADDING_TARJETA, Medidas.PADDING_TARJETA,
+                        Medidas.PADDING_TARJETA, Medidas.PADDING_TARJETA)));
+        contenedor.setPreferredSize(new Dimension(300, 0));
+
+        JScrollPane scroll = new JScrollPane(graficoMinutos);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+        contenedor.add(scroll, BorderLayout.CENTER);
+        return contenedor;
     }
 
     private JPanel construirFormulario() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("Registrar participacion"));
+        panel.setBackground(ColoresBlaugrana.BLANCO);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ColoresBlaugrana.GRIS_MEDIO, 1),
+                BorderFactory.createTitledBorder("Registrar participacion")));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(4, 4, 4, 4);
         gbc.anchor = GridBagConstraints.WEST;
@@ -103,6 +179,7 @@ public class RendimientoPanel extends JPanel implements Refrescable {
         PermisosUI.deshabilitarSiSoloLectura(btnGuardar, btnEliminar);
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        panelBotones.setOpaque(false);
         panelBotones.add(btnNuevo);
         panelBotones.add(btnGuardar);
         panelBotones.add(btnEliminar);
@@ -206,6 +283,7 @@ public class RendimientoPanel extends JPanel implements Refrescable {
         modeloTabla.setRowCount(0);
         Partido partido = (Partido) cmbPartido.getSelectedItem();
         if (partido == null) {
+            actualizarResumen(List.of());
             return;
         }
         try {
@@ -214,9 +292,30 @@ public class RendimientoPanel extends JPanel implements Refrescable {
                 modeloTabla.addRow(new Object[]{p.getIdParticipacion(), p.getNombreJugador(), p.getMinutosJugados(),
                         p.getGoles(), p.getAsistencias(), p.getTarjetasAmarillas(), p.getTarjetasRojas(), p.isTitular()});
             }
+            actualizarResumen(participaciones);
         } catch (SQLException e) {
             Mensajes.error(this, "No se pudo cargar la participacion del partido", e);
         }
+    }
+
+    private void actualizarResumen(List<ParticipacionPartido> participaciones) {
+        int goles = 0;
+        int asistencias = 0;
+        int tarjetas = 0;
+        List<String> etiquetas = new ArrayList<>();
+        List<Double> minutos = new ArrayList<>();
+        for (ParticipacionPartido p : participaciones) {
+            goles += p.getGoles();
+            asistencias += p.getAsistencias();
+            tarjetas += p.getTarjetasAmarillas() + p.getTarjetasRojas();
+            etiquetas.add(p.getNombreJugador());
+            minutos.add((double) p.getMinutosJugados());
+        }
+        tarjetaJugadoresUtilizados.setValor(String.valueOf(participaciones.size()));
+        tarjetaGolesPartido.setValor(String.valueOf(goles));
+        tarjetaAsistenciasPartido.setValor(String.valueOf(asistencias));
+        tarjetaTarjetasPartido.setValor(String.valueOf(tarjetas));
+        graficoMinutos.setDatos("Minutos por jugador", etiquetas, minutos);
     }
 
     @Override

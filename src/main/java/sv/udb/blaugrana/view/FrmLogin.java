@@ -5,6 +5,9 @@ import sv.udb.blaugrana.service.LoginService;
 import sv.udb.blaugrana.session.SesionUsuario;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
 import sv.udb.blaugrana.util.Mensajes;
+import sv.udb.blaugrana.util.Tipografia;
+import sv.udb.blaugrana.view.componentes.EscudoEquipo;
+import sv.udb.blaugrana.view.componentes.PanelDegradado;
 
 import javax.swing.*;
 import java.awt.*;
@@ -21,7 +24,7 @@ public class FrmLogin extends JFrame {
         super("Blaugrana Management - Iniciar sesion");
         construirInterfaz();
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(420, 420);
+        setSize(420, 460);
         setLocationRelativeTo(null);
         setResizable(false);
     }
@@ -30,21 +33,33 @@ public class FrmLogin extends JFrame {
         JPanel panelRaiz = new JPanel(new BorderLayout());
         panelRaiz.setBackground(ColoresBlaugrana.AZUL_OSCURO);
 
+        PanelDegradado panelSuperior = new PanelDegradado(new BorderLayout(),
+                ColoresBlaugrana.AZUL_OSCURO, ColoresBlaugrana.AZUL_MEDIO, true);
+
+        JPanel bloqueTitulo = new JPanel();
+        bloqueTitulo.setOpaque(false);
+        bloqueTitulo.setLayout(new BoxLayout(bloqueTitulo, BoxLayout.Y_AXIS));
+        bloqueTitulo.setBorder(BorderFactory.createEmptyBorder(24, 10, 20, 10));
+
+        EscudoEquipo escudo = new EscudoEquipo("FC Barcelona", true, 56);
+        escudo.setAlignmentX(Component.CENTER_ALIGNMENT);
+
         JLabel titulo = new JLabel("BLAUGRANA MANAGEMENT", SwingConstants.CENTER);
-        titulo.setFont(new Font("SansSerif", Font.BOLD, 22));
+        titulo.setFont(Tipografia.DISPLAY);
         titulo.setForeground(ColoresBlaugrana.DORADO);
-        titulo.setBorder(BorderFactory.createEmptyBorder(30, 10, 5, 10));
+        titulo.setAlignmentX(Component.CENTER_ALIGNMENT);
+        titulo.setBorder(BorderFactory.createEmptyBorder(10, 10, 4, 10));
 
-        JLabel subtitulo = new JLabel("<html><div style='text-align:center;'>Sistema Integral de Gestion Deportiva,<br>"
+        JLabel subtitulo = new JLabel("<html><div style='text-align:center;'>Sistema Integral de Gestión Deportiva,<br>"
                 + "Financiera y Administrativa</div></html>", SwingConstants.CENTER);
-        subtitulo.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        subtitulo.setForeground(ColoresBlaugrana.BLANCO);
-        subtitulo.setBorder(BorderFactory.createEmptyBorder(0, 10, 25, 10));
+        subtitulo.setFont(Tipografia.NOTA);
+        subtitulo.setForeground(ColoresBlaugrana.DORADO_SUAVE);
+        subtitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JPanel panelSuperior = new JPanel(new BorderLayout());
-        panelSuperior.setOpaque(false);
-        panelSuperior.add(titulo, BorderLayout.NORTH);
-        panelSuperior.add(subtitulo, BorderLayout.CENTER);
+        bloqueTitulo.add(escudo);
+        bloqueTitulo.add(titulo);
+        bloqueTitulo.add(subtitulo);
+        panelSuperior.add(bloqueTitulo, BorderLayout.CENTER);
 
         JPanel panelFormulario = new JPanel();
         panelFormulario.setBackground(ColoresBlaugrana.BLANCO);
@@ -57,11 +72,15 @@ public class FrmLogin extends JFrame {
         gbc.anchor = GridBagConstraints.WEST;
 
         JLabel lblUsuario = new JLabel("Usuario:");
+        lblUsuario.setFont(Tipografia.CUERPO);
         JLabel lblContrasena = new JLabel("Contrasena:");
+        lblContrasena.setFont(Tipografia.CUERPO);
         JButton btnIngresar = new JButton("Ingresar al sistema");
         btnIngresar.setBackground(ColoresBlaugrana.GRANATE);
         btnIngresar.setForeground(ColoresBlaugrana.BLANCO);
+        btnIngresar.setFont(Tipografia.CUERPO_NEGRITA);
         btnIngresar.setFocusPainted(false);
+        btnIngresar.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         panelFormulario.add(lblUsuario, gbc);
         gbc.gridx = 1;
@@ -81,13 +100,14 @@ public class FrmLogin extends JFrame {
         panelFormulario.add(btnIngresar, gbc);
 
         JLabel lblAyuda = new JLabel("Usuario de demostracion: admin / admin123", SwingConstants.CENTER);
-        lblAyuda.setFont(new Font("SansSerif", Font.ITALIC, 11));
-        lblAyuda.setForeground(Color.GRAY);
+        lblAyuda.setFont(Tipografia.NOTA);
+        lblAyuda.setForeground(ColoresBlaugrana.GRIS_TEXTO_SUAVE);
         gbc.gridy = 3;
         gbc.insets = new Insets(0, 8, 0, 8);
         panelFormulario.add(lblAyuda, gbc);
 
         JLabel pie = new JLabel("Proyecto academico - Universidad Don Bosco", SwingConstants.CENTER);
+        pie.setFont(Tipografia.NOTA);
         pie.setForeground(ColoresBlaugrana.GRIS_CLARO);
         pie.setBorder(BorderFactory.createEmptyBorder(5, 5, 15, 5));
 
