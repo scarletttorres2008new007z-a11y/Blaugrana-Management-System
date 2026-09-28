@@ -2,7 +2,11 @@ package sv.udb.blaugrana.view;
 
 import sv.udb.blaugrana.session.SesionUsuario;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
+import sv.udb.blaugrana.util.Tipografia;
 import sv.udb.blaugrana.view.bonificaciones.BonificacionesPanel;
+import sv.udb.blaugrana.view.componentes.AvatarIniciales;
+import sv.udb.blaugrana.view.componentes.IconoMenu;
+import sv.udb.blaugrana.view.componentes.PanelDegradado;
 import sv.udb.blaugrana.view.contratos.ContratosPanel;
 import sv.udb.blaugrana.view.egresos.EgresosPanel;
 import sv.udb.blaugrana.view.ingresos.IngresosPanel;
@@ -23,16 +27,21 @@ import java.util.function.Supplier;
 
 public class FrmPrincipal extends JFrame {
 
+    private record OpcionMenu(String etiqueta, String clave, IconoMenu.Tipo icono) {
+    }
+
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel panelContenido = new JPanel(cardLayout);
     private final Map<String, JComponent> paneles = new LinkedHashMap<>();
+    private final Map<String, BotonMenuLateral> botonesMenu = new LinkedHashMap<>();
+    private String claveActual;
 
     public FrmPrincipal() {
         super("Blaugrana Management System");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1200, 750);
+        setSize(1250, 780);
         setLocationRelativeTo(null);
-        setMinimumSize(new Dimension(1000, 650));
+        setMinimumSize(new Dimension(1050, 680));
         construirInterfaz();
     }
 
@@ -75,6 +84,10 @@ public class FrmPrincipal extends JFrame {
         if (panel == null) {
             return;
         }
+        claveActual = clave;
+        for (Map.Entry<String, BotonMenuLateral> entrada : botonesMenu.entrySet()) {
+            entrada.getValue().setSeleccionado(entrada.getKey().equals(clave));
+        }
         if (panel instanceof Refrescable refrescable) {
             refrescable.refrescar();
         }
@@ -82,64 +95,101 @@ public class FrmPrincipal extends JFrame {
     }
 
     private JPanel construirEncabezado() {
-        JPanel encabezado = new JPanel(new BorderLayout());
-        encabezado.setBackground(ColoresBlaugrana.AZUL_OSCURO);
-        encabezado.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        PanelDegradado encabezado = new PanelDegradado(new BorderLayout(),
+                ColoresBlaugrana.AZUL_OSCURO, ColoresBlaugrana.AZUL_MEDIO, true);
+        encabezado.setBorder(BorderFactory.createEmptyBorder(12, 24, 12, 24));
+
+        JPanel bloqueTitulo = new JPanel();
+        bloqueTitulo.setOpaque(false);
+        bloqueTitulo.setLayout(new BoxLayout(bloqueTitulo, BoxLayout.Y_AXIS));
 
         JLabel titulo = new JLabel("BLAUGRANA MANAGEMENT");
-        titulo.setFont(new Font("SansSerif", Font.BOLD, 20));
+        titulo.setFont(Tipografia.DISPLAY);
         titulo.setForeground(ColoresBlaugrana.DORADO);
+        titulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel subtitulo = new JLabel("Sistema Integral de Gestión Deportiva");
+        subtitulo.setFont(Tipografia.NOTA);
+        subtitulo.setForeground(ColoresBlaugrana.GRIS_CLARO);
+        subtitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        bloqueTitulo.add(titulo);
+        bloqueTitulo.add(subtitulo);
 
         String nombreUsuario = SesionUsuario.getUsuarioActivo() != null
                 ? SesionUsuario.getUsuarioActivo().getNombreCompleto()
                 : "Invitado";
-        JLabel usuario = new JLabel(nombreUsuario + "  ");
-        usuario.setForeground(ColoresBlaugrana.BLANCO);
-        usuario.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        String rolUsuario = SesionUsuario.getUsuarioActivo() != null
+                ? SesionUsuario.getUsuarioActivo().getNombreRol()
+                : "";
 
-        JButton btnCerrarSesion = new JButton("Cerrar sesion");
+        JPanel bloqueUsuario = new JPanel();
+        bloqueUsuario.setOpaque(false);
+        bloqueUsuario.setLayout(new BoxLayout(bloqueUsuario, BoxLayout.Y_AXIS));
+        JLabel lblNombre = new JLabel(nombreUsuario);
+        lblNombre.setFont(Tipografia.CUERPO_NEGRITA);
+        lblNombre.setForeground(ColoresBlaugrana.BLANCO);
+        lblNombre.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        JLabel lblRol = new JLabel(rolUsuario);
+        lblRol.setFont(Tipografia.NOTA);
+        lblRol.setForeground(ColoresBlaugrana.GRIS_CLARO);
+        lblRol.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        bloqueUsuario.add(lblNombre);
+        bloqueUsuario.add(lblRol);
+
+        JButton btnCerrarSesion = new JButton("Cerrar sesión");
         btnCerrarSesion.setFocusPainted(false);
         btnCerrarSesion.addActionListener(e -> cerrarSesion());
 
-        JPanel panelDerecho = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        JPanel panelDerecho = new JPanel(new FlowLayout(FlowLayout.RIGHT, 14, 0));
         panelDerecho.setOpaque(false);
-        panelDerecho.add(usuario);
+        panelDerecho.add(new AvatarIniciales(nombreUsuario, ColoresBlaugrana.GRANATE, 38));
+        panelDerecho.add(bloqueUsuario);
         panelDerecho.add(btnCerrarSesion);
 
-        encabezado.add(titulo, BorderLayout.WEST);
+        encabezado.add(bloqueTitulo, BorderLayout.WEST);
         encabezado.add(panelDerecho, BorderLayout.EAST);
         return encabezado;
     }
 
     private JScrollPane construirMenuLateral() {
-        JPanel menu = new JPanel();
+        PanelDegradado menu = new PanelDegradado(null, ColoresBlaugrana.GRANATE, ColoresBlaugrana.GRANATE_OSCURO, false);
         menu.setLayout(new BoxLayout(menu, BoxLayout.Y_AXIS));
-        menu.setBackground(ColoresBlaugrana.GRANATE);
-        menu.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        menu.setBorder(BorderFactory.createEmptyBorder(14, 0, 10, 0));
 
-        agregarGrupo(menu, "INICIO", new String[][]{{"Dashboard", "dashboard"}});
-        agregarGrupo(menu, "CLUB", new String[][]{
-                {"Jugadores", "jugadores"}, {"Personal", "personal"}, {"Contratos", "contratos"}});
-        agregarGrupo(menu, "DEPORTIVO", new String[][]{
-                {"Partidos", "partidos"}, {"Rendimiento", "rendimiento"}, {"Bonificaciones", "bonificaciones"}});
-        agregarGrupo(menu, "FINANZAS", new String[][]{
-                {"Pagos", "pagos"}, {"Ingresos", "ingresos"}, {"Egresos", "egresos"}, {"Presupuesto", "presupuesto"}});
-        agregarGrupo(menu, "REPORTES", new String[][]{{"Reportes", "reportes"}});
-        agregarGrupo(menu, "ADMINISTRACION", new String[][]{{"Usuarios", "usuarios"}});
+        agregarGrupo(menu, "INICIO", new OpcionMenu[]{
+                new OpcionMenu("Dashboard", "dashboard", IconoMenu.Tipo.DASHBOARD)});
+        agregarGrupo(menu, "CLUB", new OpcionMenu[]{
+                new OpcionMenu("Jugadores", "jugadores", IconoMenu.Tipo.JUGADORES),
+                new OpcionMenu("Personal", "personal", IconoMenu.Tipo.PERSONAL),
+                new OpcionMenu("Contratos", "contratos", IconoMenu.Tipo.CONTRATOS)});
+        agregarGrupo(menu, "DEPORTIVO", new OpcionMenu[]{
+                new OpcionMenu("Partidos", "partidos", IconoMenu.Tipo.PARTIDOS),
+                new OpcionMenu("Rendimiento", "rendimiento", IconoMenu.Tipo.RENDIMIENTO),
+                new OpcionMenu("Bonificaciones", "bonificaciones", IconoMenu.Tipo.BONIFICACIONES)});
+        agregarGrupo(menu, "FINANZAS", new OpcionMenu[]{
+                new OpcionMenu("Pagos", "pagos", IconoMenu.Tipo.PAGOS),
+                new OpcionMenu("Ingresos", "ingresos", IconoMenu.Tipo.INGRESOS),
+                new OpcionMenu("Egresos", "egresos", IconoMenu.Tipo.EGRESOS),
+                new OpcionMenu("Presupuesto", "presupuesto", IconoMenu.Tipo.PRESUPUESTO)});
+        agregarGrupo(menu, "REPORTES", new OpcionMenu[]{
+                new OpcionMenu("Reportes", "reportes", IconoMenu.Tipo.REPORTES)});
+        agregarGrupo(menu, "ADMINISTRACIÓN", new OpcionMenu[]{
+                new OpcionMenu("Usuarios", "usuarios", IconoMenu.Tipo.USUARIOS)});
 
         menu.add(Box.createVerticalGlue());
 
         JScrollPane scroll = new JScrollPane(menu);
         scroll.setBorder(BorderFactory.createEmptyBorder());
-        scroll.setPreferredSize(new Dimension(210, 0));
+        scroll.setPreferredSize(new Dimension(225, 0));
         scroll.getVerticalScrollBar().setUnitIncrement(16);
         return scroll;
     }
 
-    private void agregarGrupo(JPanel menu, String tituloSeccion, String[][] opciones) {
+    private void agregarGrupo(JPanel menu, String tituloSeccion, OpcionMenu[] opciones) {
         boolean hayAlgunaVisible = false;
-        for (String[] opcion : opciones) {
-            if (paneles.containsKey(opcion[1])) {
+        for (OpcionMenu opcion : opciones) {
+            if (paneles.containsKey(opcion.clave())) {
                 hayAlgunaVisible = true;
                 break;
             }
@@ -148,9 +198,9 @@ public class FrmPrincipal extends JFrame {
             return;
         }
         agregarSeccion(menu, tituloSeccion);
-        for (String[] opcion : opciones) {
-            if (paneles.containsKey(opcion[1])) {
-                agregarOpcion(menu, opcion[0], opcion[1]);
+        for (OpcionMenu opcion : opciones) {
+            if (paneles.containsKey(opcion.clave())) {
+                agregarOpcion(menu, opcion);
             }
         }
     }
@@ -158,24 +208,16 @@ public class FrmPrincipal extends JFrame {
     private void agregarSeccion(JPanel menu, String texto) {
         JLabel etiqueta = new JLabel(texto);
         etiqueta.setForeground(ColoresBlaugrana.DORADO);
-        etiqueta.setFont(new Font("SansSerif", Font.BOLD, 11));
-        etiqueta.setBorder(BorderFactory.createEmptyBorder(14, 16, 4, 16));
+        etiqueta.setFont(Tipografia.ETIQUETA);
+        etiqueta.setBorder(BorderFactory.createEmptyBorder(16, 20, 6, 16));
         etiqueta.setAlignmentX(Component.LEFT_ALIGNMENT);
         menu.add(etiqueta);
     }
 
-    private void agregarOpcion(JPanel menu, String texto, String clave) {
-        JButton boton = new JButton(texto);
-        boton.setAlignmentX(Component.LEFT_ALIGNMENT);
-        boton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        boton.setHorizontalAlignment(SwingConstants.LEFT);
-        boton.setBackground(ColoresBlaugrana.GRANATE);
-        boton.setForeground(ColoresBlaugrana.BLANCO);
-        boton.setBorder(BorderFactory.createEmptyBorder(6, 24, 6, 10));
-        boton.setFocusPainted(false);
-        boton.setBorderPainted(false);
-        boton.setContentAreaFilled(true);
-        boton.addActionListener(e -> mostrarPanel(clave));
+    private void agregarOpcion(JPanel menu, OpcionMenu opcion) {
+        BotonMenuLateral boton = new BotonMenuLateral(opcion.etiqueta(), new IconoMenu(opcion.icono(), 18));
+        boton.addActionListener(e -> mostrarPanel(opcion.clave()));
+        botonesMenu.put(opcion.clave(), boton);
         menu.add(boton);
     }
 
@@ -183,5 +225,49 @@ public class FrmPrincipal extends JFrame {
         SesionUsuario.cerrar();
         dispose();
         new FrmLogin().setVisible(true);
+    }
+
+    /** Boton de navegacion del sidebar, con estado normal / hover / seleccionado. */
+    private static final class BotonMenuLateral extends JButton {
+
+        private boolean seleccionado;
+
+        BotonMenuLateral(String texto, Icon icono) {
+            super(texto, icono);
+            setHorizontalAlignment(SwingConstants.LEFT);
+            setIconTextGap(14);
+            setAlignmentX(Component.LEFT_ALIGNMENT);
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+            setBorder(BorderFactory.createEmptyBorder(8, 20, 8, 12));
+            setFont(Tipografia.CUERPO_NEGRITA);
+            setForeground(ColoresBlaugrana.BLANCO);
+            setContentAreaFilled(false);
+            setBorderPainted(false);
+            setFocusPainted(false);
+            setOpaque(false);
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        }
+
+        void setSeleccionado(boolean seleccionado) {
+            this.seleccionado = seleccionado;
+            setForeground(seleccionado ? ColoresBlaugrana.DORADO : ColoresBlaugrana.BLANCO);
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            if (seleccionado) {
+                g2.setColor(ColoresBlaugrana.AZUL_OSCURO);
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                g2.setColor(ColoresBlaugrana.DORADO);
+                g2.fillRect(0, 0, 4, getHeight());
+            } else if (getModel().isRollover()) {
+                g2.setColor(ColoresBlaugrana.GRANATE_OSCURO);
+                g2.fillRect(0, 0, getWidth(), getHeight());
+            }
+            g2.dispose();
+            super.paintComponent(g);
+        }
     }
 }

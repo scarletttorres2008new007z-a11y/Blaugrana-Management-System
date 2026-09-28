@@ -1,5 +1,6 @@
 package sv.udb.blaugrana;
 
+import sv.udb.blaugrana.util.RecursosExternos;
 import sv.udb.blaugrana.view.FrmLogin;
 
 import javax.swing.SwingUtilities;
@@ -14,6 +15,7 @@ public class Main {
             // Se conserva el look and feel por defecto de Swing.
         }
 
+        RecursosExternos.prepararCarpetas();
         SwingUtilities.invokeLater(() -> new FrmLogin().setVisible(true));
     }
 }

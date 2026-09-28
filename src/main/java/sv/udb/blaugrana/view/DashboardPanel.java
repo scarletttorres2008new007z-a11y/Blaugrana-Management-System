@@ -1,7 +1,6 @@
 package sv.udb.blaugrana.view;
 
 import sv.udb.blaugrana.model.Partido;
-import sv.udb.blaugrana.service.BonificacionService;
 import sv.udb.blaugrana.service.ContratoService;
 import sv.udb.blaugrana.service.FinanzasService;
 import sv.udb.blaugrana.service.JugadorService;
@@ -10,8 +9,16 @@ import sv.udb.blaugrana.service.PartidoService;
 import sv.udb.blaugrana.service.ReporteService;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
 import sv.udb.blaugrana.util.FormatoMoneda;
+import sv.udb.blaugrana.util.Medidas;
 import sv.udb.blaugrana.util.Mensajes;
+import sv.udb.blaugrana.util.Tipografia;
 import sv.udb.blaugrana.util.graficos.GraficoBarras;
+import sv.udb.blaugrana.view.componentes.EncabezadoSeccion;
+import sv.udb.blaugrana.view.componentes.EscudoEquipo;
+import sv.udb.blaugrana.view.componentes.Insignia;
+import sv.udb.blaugrana.view.componentes.PanelDegradado;
+import sv.udb.blaugrana.view.componentes.TarjetaEstadistica;
+import sv.udb.blaugrana.view.componentes.TarjetaPartido;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -22,65 +29,107 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Portada del sistema al estilo de un portal deportivo: banda hero con el
+ * proximo partido, resumen deportivo y financiero mediante tarjetas de
+ * estadistica, franja de ultimos resultados, alertas con insignias de estado
+ * y el grafico de plantilla por posicion. Todos los valores provienen de los
+ * mismos metodos de servicio que ya existian antes del rediseño visual.
+ */
 public class DashboardPanel extends JPanel implements Refrescable {
+
+    private static final int DIAS_ALERTA_CONTRATO = 60;
+    private static final int MAX_RESULTADOS_RECIENTES = 3;
 
     private final JugadorService jugadorService = new JugadorService();
     private final ContratoService contratoService = new ContratoService();
     private final PartidoService partidoService = new PartidoService();
     private final FinanzasService finanzasService = new FinanzasService();
     private final PagoService pagoService = new PagoService();
-    private final BonificacionService bonificacionService = new BonificacionService();
     private final ReporteService reporteService = new ReporteService();
 
-    private static final int DIAS_ALERTA_CONTRATO = 60;
+    private final TarjetaEstadistica tarjetaPlantilla =
+            new TarjetaEstadistica("Plantilla activa", "0", ColoresBlaugrana.AZUL_OSCURO);
+    private final TarjetaEstadistica tarjetaContratos =
+            new TarjetaEstadistica("Contratos vigentes", "0", ColoresBlaugrana.AZUL_OSCURO);
+    private final TarjetaEstadistica tarjetaPartidosJugados =
+            new TarjetaEstadistica("Partidos disputados", "0", ColoresBlaugrana.AZUL_OSCURO);
 
-    private final JLabel lblPlantilla = valorTarjeta("0", 30);
-    private final JLabel lblContratos = valorTarjeta("0", 30);
-    private final JLabel lblPartidos = valorTarjeta("0", 30);
+    private final TarjetaEstadistica tarjetaVictorias =
+            new TarjetaEstadistica("Victorias", "0", ColoresBlaugrana.VERDE_ACTIVO, Tipografia.DATO_MEDIANO);
+    private final TarjetaEstadistica tarjetaEmpates =
+            new TarjetaEstadistica("Empates", "0", ColoresBlaugrana.GRIS_TEXTO_SUAVE, Tipografia.DATO_MEDIANO);
+    private final TarjetaEstadistica tarjetaDerrotas =
+            new TarjetaEstadistica("Derrotas", "0", ColoresBlaugrana.ROJO_ALERTA, Tipografia.DATO_MEDIANO);
+    private final TarjetaEstadistica tarjetaGolesFavor =
+            new TarjetaEstadistica("Goles a favor", "0", ColoresBlaugrana.AZUL_MEDIO, Tipografia.DATO_MEDIANO);
+    private final TarjetaEstadistica tarjetaGolesContra =
+            new TarjetaEstadistica("Goles en contra", "0", ColoresBlaugrana.GRANATE, Tipografia.DATO_MEDIANO);
 
-    private final JLabel lblVictorias = valorTarjeta("0", 22);
-    private final JLabel lblEmpates = valorTarjeta("0", 22);
-    private final JLabel lblDerrotas = valorTarjeta("0", 22);
-    private final JLabel lblGolesFavor = valorTarjeta("0", 22);
-    private final JLabel lblGolesContra = valorTarjeta("0", 22);
+    private final TarjetaEstadistica tarjetaIngresosMes =
+            new TarjetaEstadistica("Ingresos del mes", "$0.00", ColoresBlaugrana.VERDE_ACTIVO, Tipografia.DATO_MEDIANO);
+    private final TarjetaEstadistica tarjetaEgresosMes =
+            new TarjetaEstadistica("Egresos del mes", "$0.00", ColoresBlaugrana.ROJO_ALERTA, Tipografia.DATO_MEDIANO);
+    private final TarjetaEstadistica tarjetaNomina =
+            new TarjetaEstadistica("Nómina mensual", "$0.00", ColoresBlaugrana.AZUL_OSCURO, Tipografia.DATO_MEDIANO);
+    private final TarjetaEstadistica tarjetaPagosPendientes =
+            new TarjetaEstadistica("Pagos pendientes", "0", ColoresBlaugrana.GRANATE, Tipografia.DATO_MEDIANO);
 
-    private final JLabel lblIngresosMes = valorTarjeta("$0.00", 18);
-    private final JLabel lblEgresosMes = valorTarjeta("$0.00", 18);
-    private final JLabel lblNomina = valorTarjeta("$0.00", 18);
-    private final JLabel lblPagosPendientes = valorTarjeta("0", 18);
+    private final TarjetaEstadistica tarjetaIngresosTotales =
+            new TarjetaEstadistica("Ingresos totales", "$0.00", ColoresBlaugrana.VERDE_ACTIVO);
+    private final TarjetaEstadistica tarjetaEgresosTotales =
+            new TarjetaEstadistica("Egresos totales", "$0.00", ColoresBlaugrana.ROJO_ALERTA);
+    private final TarjetaEstadistica tarjetaBalance =
+            new TarjetaEstadistica("Balance general", "$0.00", ColoresBlaugrana.AZUL_OSCURO);
 
-    private final JLabel lblProximoPartido = new JLabel("Sin partidos programados");
-    private final JLabel lblIngresos = new JLabel("$0.00");
-    private final JLabel lblEgresos = new JLabel("$0.00");
-    private final JLabel lblBalance = new JLabel("$0.00");
-
+    private final JPanel panelHeroPartido = new JPanel(new BorderLayout());
+    private final JPanel panelUltimosResultados = new JPanel(new GridLayout(1, 1, 12, 12));
     private final JPanel panelAlertas = new JPanel();
     private final GraficoBarras graficoPosiciones = new GraficoBarras();
 
     public DashboardPanel() {
         setLayout(new BorderLayout());
-        setBorder(new EmptyBorder(20, 20, 20, 20));
         setBackground(ColoresBlaugrana.GRIS_CLARO);
 
-        JLabel titulo = new JLabel("FC BARCELONA - Panel general del club");
-        titulo.setFont(new Font("SansSerif", Font.BOLD, 20));
-        titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
-        titulo.setBorder(new EmptyBorder(0, 0, 15, 0));
-        add(titulo, BorderLayout.NORTH);
+        panelHeroPartido.setOpaque(false);
+        panelUltimosResultados.setOpaque(false);
+
+        add(construirHero(), BorderLayout.NORTH);
 
         JPanel contenido = new JPanel();
         contenido.setOpaque(false);
         contenido.setLayout(new BoxLayout(contenido, BoxLayout.Y_AXIS));
+        contenido.setBorder(new EmptyBorder(Medidas.PADDING_SECCION, Medidas.PADDING_SECCION,
+                Medidas.PADDING_SECCION, Medidas.PADDING_SECCION));
 
-        contenido.add(construirFilaTarjetasPrincipales());
-        contenido.add(Box.createVerticalStrut(15));
-        contenido.add(construirFilaDeportiva());
-        contenido.add(Box.createVerticalStrut(15));
-        contenido.add(construirFilaFinanciera());
-        contenido.add(Box.createVerticalStrut(15));
-        contenido.add(construirFilaInferior());
-        contenido.add(Box.createVerticalStrut(15));
-        contenido.add(construirFilaAlertasYGrafico());
+        agregarAncho(contenido, new EncabezadoSeccion("Resumen deportivo",
+                "Plantilla, contratos y actividad de competición"));
+        agregarAncho(contenido, filaTarjetas(tarjetaPlantilla, tarjetaContratos, tarjetaPartidosJugados));
+        contenido.add(Box.createVerticalStrut(Medidas.ESPACIO_ENTRE_TARJETAS));
+        agregarAncho(contenido, filaTarjetas(tarjetaVictorias, tarjetaEmpates, tarjetaDerrotas,
+                tarjetaGolesFavor, tarjetaGolesContra));
+        contenido.add(Box.createVerticalStrut(Medidas.PADDING_SECCION));
+
+        agregarAncho(contenido, new EncabezadoSeccion("Últimos resultados"));
+        agregarAncho(contenido, panelUltimosResultados);
+        contenido.add(Box.createVerticalStrut(Medidas.PADDING_SECCION));
+
+        agregarAncho(contenido, new EncabezadoSeccion("Situación financiera",
+                "Ingresos, egresos y nómina del mes en curso"));
+        agregarAncho(contenido, filaTarjetas(tarjetaIngresosMes, tarjetaEgresosMes, tarjetaNomina,
+                tarjetaPagosPendientes));
+        contenido.add(Box.createVerticalStrut(Medidas.ESPACIO_ENTRE_TARJETAS));
+        agregarAncho(contenido, filaTarjetas(tarjetaIngresosTotales, tarjetaEgresosTotales, tarjetaBalance));
+        contenido.add(Box.createVerticalStrut(Medidas.PADDING_SECCION));
+
+        agregarAncho(contenido, new EncabezadoSeccion("Alertas y plantilla por posición"));
+        JPanel filaInferior = new JPanel(new GridLayout(1, 2, Medidas.ESPACIO_ENTRE_TARJETAS, 0));
+        filaInferior.setOpaque(false);
+        filaInferior.setPreferredSize(new Dimension(0, 240));
+        filaInferior.setMaximumSize(new Dimension(Integer.MAX_VALUE, 260));
+        filaInferior.add(construirPanelAlertas());
+        filaInferior.add(construirPanelGrafico());
+        agregarAncho(contenido, filaInferior);
 
         JScrollPane scroll = new JScrollPane(contenido);
         scroll.setBorder(BorderFactory.createEmptyBorder());
@@ -90,88 +139,87 @@ public class DashboardPanel extends JPanel implements Refrescable {
         add(scroll, BorderLayout.CENTER);
     }
 
-    private JPanel construirFilaTarjetasPrincipales() {
-        JPanel fila = new JPanel(new GridLayout(1, 3, 15, 15));
+    private void agregarAncho(JPanel contenedor, JComponent hijo) {
+        hijo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contenedor.add(hijo);
+    }
+
+    private JPanel filaTarjetas(JComponent... tarjetas) {
+        JPanel fila = new JPanel(new GridLayout(1, tarjetas.length, Medidas.ESPACIO_ENTRE_TARJETAS,
+                Medidas.ESPACIO_ENTRE_TARJETAS));
         fila.setOpaque(false);
-        fila.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
-        fila.add(tarjeta("PLANTILLA", lblPlantilla));
-        fila.add(tarjeta("CONTRATOS VIGENTES", lblContratos));
-        fila.add(tarjeta("PARTIDOS FINALIZADOS", lblPartidos));
+        fila.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
+        for (JComponent tarjeta : tarjetas) {
+            fila.add(tarjeta);
+        }
         return fila;
     }
 
-    private JPanel construirFilaDeportiva() {
-        JPanel contenedor = new JPanel(new BorderLayout());
-        contenedor.setOpaque(false);
-        contenedor.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+    private JPanel construirHero() {
+        PanelDegradado hero = new PanelDegradado(new BorderLayout(24, 0),
+                ColoresBlaugrana.AZUL_OSCURO, ColoresBlaugrana.AZUL_MEDIO, true);
+        hero.setBorder(new EmptyBorder(24, Medidas.PADDING_SECCION, 24, Medidas.PADDING_SECCION));
 
-        JLabel etiqueta = new JLabel("DESEMPEÑO DEPORTIVO");
-        etiqueta.setFont(new Font("SansSerif", Font.BOLD, 12));
-        etiqueta.setForeground(ColoresBlaugrana.GRIS_TEXTO);
-        etiqueta.setBorder(new EmptyBorder(0, 2, 5, 0));
-        contenedor.add(etiqueta, BorderLayout.NORTH);
+        JPanel bloqueTitulo = new JPanel();
+        bloqueTitulo.setOpaque(false);
+        bloqueTitulo.setLayout(new BoxLayout(bloqueTitulo, BoxLayout.Y_AXIS));
 
-        JPanel fila = new JPanel(new GridLayout(1, 5, 12, 12));
-        fila.setOpaque(false);
-        fila.add(tarjetaPequena("VICTORIAS", lblVictorias, ColoresBlaugrana.VERDE_ACTIVO));
-        fila.add(tarjetaPequena("EMPATES", lblEmpates, ColoresBlaugrana.GRIS_TEXTO));
-        fila.add(tarjetaPequena("DERROTAS", lblDerrotas, ColoresBlaugrana.ROJO_ALERTA));
-        fila.add(tarjetaPequena("GOLES A FAVOR", lblGolesFavor, ColoresBlaugrana.AZUL_OSCURO));
-        fila.add(tarjetaPequena("GOLES EN CONTRA", lblGolesContra, ColoresBlaugrana.GRANATE));
-        contenedor.add(fila, BorderLayout.CENTER);
-        return contenedor;
-    }
+        JPanel filaTitulo = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 0));
+        filaTitulo.setOpaque(false);
+        filaTitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        filaTitulo.add(new EscudoEquipo("FC Barcelona", true, 60));
 
-    private JPanel construirFilaFinanciera() {
-        JPanel contenedor = new JPanel(new BorderLayout());
-        contenedor.setOpaque(false);
-        contenedor.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+        JPanel textoTitulo = new JPanel();
+        textoTitulo.setOpaque(false);
+        textoTitulo.setLayout(new BoxLayout(textoTitulo, BoxLayout.Y_AXIS));
+        JLabel titulo = new JLabel("Panel general del club");
+        titulo.setFont(Tipografia.DISPLAY);
+        titulo.setForeground(ColoresBlaugrana.BLANCO);
+        titulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel subtitulo = new JLabel("Resumen deportivo y financiero en tiempo real");
+        subtitulo.setFont(Tipografia.NOTA);
+        subtitulo.setForeground(ColoresBlaugrana.DORADO_SUAVE);
+        subtitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        textoTitulo.add(titulo);
+        textoTitulo.add(subtitulo);
+        filaTitulo.add(textoTitulo);
 
-        JLabel etiqueta = new JLabel("SITUACION FINANCIERA DEL MES");
-        etiqueta.setFont(new Font("SansSerif", Font.BOLD, 12));
-        etiqueta.setForeground(ColoresBlaugrana.GRIS_TEXTO);
-        etiqueta.setBorder(new EmptyBorder(0, 2, 5, 0));
-        contenedor.add(etiqueta, BorderLayout.NORTH);
+        bloqueTitulo.add(Box.createVerticalGlue());
+        bloqueTitulo.add(filaTitulo);
+        bloqueTitulo.add(Box.createVerticalGlue());
 
-        JPanel fila = new JPanel(new GridLayout(1, 4, 12, 12));
-        fila.setOpaque(false);
-        fila.add(tarjetaPequena("INGRESOS DEL MES", lblIngresosMes, ColoresBlaugrana.VERDE_ACTIVO));
-        fila.add(tarjetaPequena("EGRESOS DEL MES", lblEgresosMes, ColoresBlaugrana.ROJO_ALERTA));
-        fila.add(tarjetaPequena("NOMINA MENSUAL", lblNomina, ColoresBlaugrana.AZUL_OSCURO));
-        fila.add(tarjetaPequena("PAGOS PENDIENTES", lblPagosPendientes, ColoresBlaugrana.GRANATE));
-        contenedor.add(fila, BorderLayout.CENTER);
-        return contenedor;
-    }
+        JPanel tarjetaProximo = new JPanel(new BorderLayout(0, 8));
+        tarjetaProximo.setBackground(ColoresBlaugrana.BLANCO);
+        tarjetaProximo.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ColoresBlaugrana.DORADO, 1),
+                new EmptyBorder(Medidas.PADDING_TARJETA, Medidas.PADDING_TARJETA,
+                        Medidas.PADDING_TARJETA, Medidas.PADDING_TARJETA)));
+        tarjetaProximo.setPreferredSize(new Dimension(360, 160));
 
-    private JPanel construirFilaInferior() {
-        JPanel fila = new JPanel(new GridLayout(1, 2, 15, 15));
-        fila.setOpaque(false);
-        fila.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
-        fila.add(construirPanelProximoPartido());
-        fila.add(construirPanelFinanzas());
-        return fila;
-    }
+        JLabel etiquetaProximo = new JLabel("PRÓXIMO PARTIDO");
+        etiquetaProximo.setFont(Tipografia.ETIQUETA);
+        etiquetaProximo.setForeground(ColoresBlaugrana.GRIS_TEXTO_SUAVE);
 
-    private JPanel construirFilaAlertasYGrafico() {
-        JPanel fila = new JPanel(new GridLayout(1, 2, 15, 15));
-        fila.setOpaque(false);
-        fila.setPreferredSize(new Dimension(0, 220));
-        fila.setMaximumSize(new Dimension(Integer.MAX_VALUE, 260));
-        fila.add(construirPanelAlertas());
-        fila.add(construirPanelGrafico());
-        return fila;
+        tarjetaProximo.add(etiquetaProximo, BorderLayout.NORTH);
+        tarjetaProximo.add(panelHeroPartido, BorderLayout.CENTER);
+
+        hero.add(bloqueTitulo, BorderLayout.CENTER);
+        hero.add(tarjetaProximo, BorderLayout.EAST);
+        return hero;
     }
 
     private JPanel construirPanelAlertas() {
         JPanel contenedor = new JPanel(new BorderLayout());
         contenedor.setBackground(ColoresBlaugrana.BLANCO);
         contenedor.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ColoresBlaugrana.DORADO, 1),
-                new EmptyBorder(15, 15, 15, 15)));
+                BorderFactory.createLineBorder(ColoresBlaugrana.GRIS_MEDIO, 1),
+                new EmptyBorder(Medidas.PADDING_TARJETA, Medidas.PADDING_TARJETA,
+                        Medidas.PADDING_TARJETA, Medidas.PADDING_TARJETA)));
 
-        JLabel titulo = new JLabel("ALERTAS");
-        titulo.setFont(new Font("SansSerif", Font.BOLD, 13));
+        JLabel titulo = new JLabel("Alertas recientes");
+        titulo.setFont(Tipografia.SUBTITULO);
         titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
+        titulo.setBorder(new EmptyBorder(0, 0, 10, 0));
         contenedor.add(titulo, BorderLayout.NORTH);
 
         panelAlertas.setLayout(new BoxLayout(panelAlertas, BoxLayout.Y_AXIS));
@@ -188,145 +236,47 @@ public class DashboardPanel extends JPanel implements Refrescable {
         JPanel contenedor = new JPanel(new BorderLayout());
         contenedor.setBackground(ColoresBlaugrana.BLANCO);
         contenedor.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ColoresBlaugrana.DORADO, 1),
-                new EmptyBorder(10, 10, 10, 10)));
+                BorderFactory.createLineBorder(ColoresBlaugrana.GRIS_MEDIO, 1),
+                new EmptyBorder(Medidas.PADDING_TARJETA, Medidas.PADDING_TARJETA,
+                        Medidas.PADDING_TARJETA, Medidas.PADDING_TARJETA)));
+
+        JLabel titulo = new JLabel("Plantilla por posición");
+        titulo.setFont(Tipografia.SUBTITULO);
+        titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
+        titulo.setBorder(new EmptyBorder(0, 0, 10, 0));
+        contenedor.add(titulo, BorderLayout.NORTH);
         contenedor.add(graficoPosiciones, BorderLayout.CENTER);
         return contenedor;
-    }
-
-    private JPanel tarjeta(String titulo, JLabel valor) {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(ColoresBlaugrana.BLANCO);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ColoresBlaugrana.DORADO, 1),
-                new EmptyBorder(15, 15, 15, 15)));
-
-        JLabel lblTitulo = new JLabel(titulo);
-        lblTitulo.setFont(new Font("SansSerif", Font.BOLD, 12));
-        lblTitulo.setForeground(ColoresBlaugrana.GRIS_TEXTO);
-
-        panel.add(lblTitulo, BorderLayout.NORTH);
-        panel.add(valor, BorderLayout.CENTER);
-        return panel;
-    }
-
-    private JPanel tarjetaPequena(String titulo, JLabel valor, Color colorValor) {
-        valor.setForeground(colorValor);
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(ColoresBlaugrana.BLANCO);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(0xE0, 0xE0, 0xE0), 1),
-                new EmptyBorder(10, 10, 10, 10)));
-
-        JLabel lblTitulo = new JLabel(titulo);
-        lblTitulo.setFont(new Font("SansSerif", Font.BOLD, 10));
-        lblTitulo.setForeground(ColoresBlaugrana.GRIS_TEXTO);
-
-        panel.add(lblTitulo, BorderLayout.NORTH);
-        panel.add(valor, BorderLayout.CENTER);
-        return panel;
-    }
-
-    private static JLabel valorTarjeta(String texto, int tamano) {
-        JLabel label = new JLabel(texto);
-        label.setFont(new Font("SansSerif", Font.BOLD, tamano));
-        label.setForeground(ColoresBlaugrana.GRANATE);
-        return label;
-    }
-
-    private JPanel construirPanelProximoPartido() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(ColoresBlaugrana.BLANCO);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ColoresBlaugrana.AZUL_OSCURO, 1),
-                new EmptyBorder(15, 15, 15, 15)));
-
-        JLabel titulo = new JLabel("PROXIMO PARTIDO");
-        titulo.setFont(new Font("SansSerif", Font.BOLD, 13));
-        titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
-
-        lblProximoPartido.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        lblProximoPartido.setVerticalAlignment(SwingConstants.CENTER);
-
-        panel.add(titulo, BorderLayout.NORTH);
-        panel.add(lblProximoPartido, BorderLayout.CENTER);
-        return panel;
-    }
-
-    private JPanel construirPanelFinanzas() {
-        JPanel panel = new JPanel(new GridLayout(3, 2, 5, 8));
-        panel.setBackground(ColoresBlaugrana.BLANCO);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ColoresBlaugrana.AZUL_OSCURO, 1),
-                new EmptyBorder(15, 15, 15, 15)));
-
-        JLabel titulo = new JLabel("SITUACION FINANCIERA GENERAL");
-        titulo.setFont(new Font("SansSerif", Font.BOLD, 13));
-        titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
-
-        JPanel contenedor = new JPanel(new BorderLayout());
-        contenedor.setOpaque(false);
-        contenedor.add(titulo, BorderLayout.NORTH);
-
-        JPanel filas = new JPanel(new GridLayout(3, 2, 5, 6));
-        filas.setOpaque(false);
-        filas.add(new JLabel("Ingresos:"));
-        lblIngresos.setForeground(ColoresBlaugrana.VERDE_ACTIVO);
-        filas.add(lblIngresos);
-        filas.add(new JLabel("Egresos:"));
-        lblEgresos.setForeground(ColoresBlaugrana.ROJO_ALERTA);
-        filas.add(lblEgresos);
-        filas.add(new JLabel("Balance:"));
-        filas.add(lblBalance);
-
-        contenedor.add(filas, BorderLayout.CENTER);
-        return contenedor;
-    }
-
-    private JLabel etiquetaAlerta(String texto, Color color) {
-        JLabel etiqueta = new JLabel(texto);
-        etiqueta.setForeground(color);
-        etiqueta.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        etiqueta.setBorder(new EmptyBorder(3, 0, 3, 0));
-        etiqueta.setAlignmentX(Component.LEFT_ALIGNMENT);
-        return etiqueta;
     }
 
     @Override
     public void refrescar() {
         try {
-            lblPlantilla.setText(String.valueOf(jugadorService.contarActivos()));
-            lblContratos.setText(String.valueOf(contratoService.contarVigentes()));
-            lblPartidos.setText(String.valueOf(partidoService.contarFinalizados()));
+            tarjetaPlantilla.setValor(String.valueOf(jugadorService.contarActivos()));
+            tarjetaContratos.setValor(String.valueOf(contratoService.contarVigentes()));
+            tarjetaPartidosJugados.setValor(String.valueOf(partidoService.contarFinalizados()));
 
-            lblVictorias.setText(String.valueOf(partidoService.contarGanados()));
-            lblEmpates.setText(String.valueOf(partidoService.contarEmpatados()));
-            lblDerrotas.setText(String.valueOf(partidoService.contarPerdidos()));
-            lblGolesFavor.setText(String.valueOf(partidoService.sumarGolesFavor()));
-            lblGolesContra.setText(String.valueOf(partidoService.sumarGolesContra()));
+            tarjetaVictorias.setValor(String.valueOf(partidoService.contarGanados()));
+            tarjetaEmpates.setValor(String.valueOf(partidoService.contarEmpatados()));
+            tarjetaDerrotas.setValor(String.valueOf(partidoService.contarPerdidos()));
+            tarjetaGolesFavor.setValor(String.valueOf(partidoService.sumarGolesFavor()));
+            tarjetaGolesContra.setValor(String.valueOf(partidoService.sumarGolesContra()));
 
-            lblIngresosMes.setText(FormatoMoneda.formatear(finanzasService.ingresosMesActual()));
-            lblEgresosMes.setText(FormatoMoneda.formatear(finanzasService.egresosMesActual()));
-            lblNomina.setText(FormatoMoneda.formatear(contratoService.nominaMensual()));
+            tarjetaIngresosMes.setValor(FormatoMoneda.formatear(finanzasService.ingresosMesActual()));
+            tarjetaEgresosMes.setValor(FormatoMoneda.formatear(finanzasService.egresosMesActual()));
+            tarjetaNomina.setValor(FormatoMoneda.formatear(contratoService.nominaMensual()));
 
             int pagosPendientes = pagoService.contarPendientes();
-            lblPagosPendientes.setText(String.valueOf(pagosPendientes));
+            tarjetaPagosPendientes.setValor(String.valueOf(pagosPendientes));
 
-            Optional<Partido> proximo = partidoService.buscarProximo();
-            if (proximo.isPresent()) {
-                Partido p = proximo.get();
-                lblProximoPartido.setText("<html>" + p.getCompeticion() + "<br><b>FC Barcelona</b> vs <b>" + p.getRival()
-                        + "</b><br>" + p.getFecha() + "</html>");
-            } else {
-                lblProximoPartido.setText("Sin partidos programados");
-            }
+            BigDecimal ingresosTotales = finanzasService.totalIngresos();
+            BigDecimal egresosTotales = finanzasService.totalEgresos();
+            tarjetaIngresosTotales.setValor(FormatoMoneda.formatear(ingresosTotales));
+            tarjetaEgresosTotales.setValor(FormatoMoneda.formatear(egresosTotales));
+            tarjetaBalance.setValor(FormatoMoneda.formatear(ingresosTotales.subtract(egresosTotales)));
 
-            BigDecimal ingresos = finanzasService.totalIngresos();
-            BigDecimal egresos = finanzasService.totalEgresos();
-            BigDecimal balance = ingresos.subtract(egresos);
-            lblIngresos.setText(FormatoMoneda.formatear(ingresos));
-            lblEgresos.setText(FormatoMoneda.formatear(egresos));
-            lblBalance.setText(FormatoMoneda.formatear(balance));
+            actualizarProximoPartido();
+            actualizarUltimosResultados();
 
             int contratosPorVencer = contratoService.contarPorVencer(DIAS_ALERTA_CONTRATO);
             int partidosProgramados = partidoService.contarProgramados();
@@ -346,31 +296,89 @@ public class DashboardPanel extends JPanel implements Refrescable {
         }
     }
 
+    private void actualizarProximoPartido() throws SQLException {
+        panelHeroPartido.removeAll();
+        Optional<Partido> proximo = partidoService.buscarProximo();
+        if (proximo.isPresent()) {
+            panelHeroPartido.add(new TarjetaPartido(proximo.get(), true), BorderLayout.CENTER);
+        } else {
+            JLabel sinPartidos = new JLabel("Sin partidos programados", SwingConstants.CENTER);
+            sinPartidos.setFont(Tipografia.CUERPO);
+            sinPartidos.setForeground(ColoresBlaugrana.GRIS_TEXTO_SUAVE);
+            panelHeroPartido.add(sinPartidos, BorderLayout.CENTER);
+        }
+        panelHeroPartido.revalidate();
+        panelHeroPartido.repaint();
+    }
+
+    private void actualizarUltimosResultados() throws SQLException {
+        panelUltimosResultados.removeAll();
+        List<Partido> recientes = partidoService.listar().stream()
+                .filter(p -> Partido.ESTADO_FINALIZADO.equals(p.getEstado()))
+                .limit(MAX_RESULTADOS_RECIENTES)
+                .toList();
+
+        if (recientes.isEmpty()) {
+            panelUltimosResultados.setLayout(new GridLayout(1, 1, 12, 12));
+            JLabel sinResultados = new JLabel("Aún no hay partidos finalizados registrados.");
+            sinResultados.setFont(Tipografia.CUERPO);
+            sinResultados.setForeground(ColoresBlaugrana.GRIS_TEXTO_SUAVE);
+            panelUltimosResultados.add(sinResultados);
+        } else {
+            panelUltimosResultados.setLayout(new GridLayout(1, recientes.size(), 12, 12));
+            for (Partido partido : recientes) {
+                JPanel tarjeta = new JPanel(new BorderLayout());
+                tarjeta.setBackground(ColoresBlaugrana.BLANCO);
+                tarjeta.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(ColoresBlaugrana.GRIS_MEDIO, 1),
+                        new EmptyBorder(12, 12, 12, 12)));
+                tarjeta.add(new TarjetaPartido(partido, false), BorderLayout.CENTER);
+                panelUltimosResultados.add(tarjeta);
+            }
+        }
+        panelUltimosResultados.revalidate();
+        panelUltimosResultados.repaint();
+    }
+
     private void actualizarAlertas(int contratosPorVencer, int pagosPendientes, BigDecimal montoPendiente,
                                     int partidosProgramados) {
         panelAlertas.removeAll();
 
         boolean hayAlertas = false;
         if (contratosPorVencer > 0) {
-            panelAlertas.add(etiquetaAlerta("⚠ " + contratosPorVencer + " contrato(s) vencen en los próximos "
+            panelAlertas.add(filaAlerta("PENDIENTE", contratosPorVencer + " contrato(s) vencen en los próximos "
                     + DIAS_ALERTA_CONTRATO + " días", ColoresBlaugrana.ROJO_ALERTA));
             hayAlertas = true;
         }
         if (pagosPendientes > 0) {
-            panelAlertas.add(etiquetaAlerta("⚠ " + pagosPendientes + " pago(s) pendiente(s) por "
-                    + FormatoMoneda.formatear(montoPendiente), new Color(0xB8, 0x86, 0x0B)));
+            panelAlertas.add(filaAlerta("PENDIENTE", pagosPendientes + " pago(s) pendiente(s) por "
+                    + FormatoMoneda.formatear(montoPendiente), ColoresBlaugrana.AMBAR_ALERTA));
             hayAlertas = true;
         }
         if (partidosProgramados > 0) {
-            panelAlertas.add(etiquetaAlerta("📅 " + partidosProgramados + " partido(s) programado(s)",
-                    ColoresBlaugrana.AZUL_OSCURO));
+            panelAlertas.add(filaAlerta("PROGRAMADO", partidosProgramados + " partido(s) programado(s)",
+                    ColoresBlaugrana.AZUL_MEDIO));
             hayAlertas = true;
         }
         if (!hayAlertas) {
-            panelAlertas.add(etiquetaAlerta("Sin alertas activas.", ColoresBlaugrana.GRIS_TEXTO));
+            panelAlertas.add(filaAlerta("ACTIVO", "Sin alertas activas.", ColoresBlaugrana.GRIS_TEXTO));
         }
 
         panelAlertas.revalidate();
         panelAlertas.repaint();
+    }
+
+    private JPanel filaAlerta(String estadoInsignia, String texto, Color colorTexto) {
+        JPanel fila = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 4));
+        fila.setOpaque(false);
+        fila.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel etiqueta = new JLabel(texto);
+        etiqueta.setFont(Tipografia.CUERPO);
+        etiqueta.setForeground(colorTexto);
+
+        fila.add(new Insignia(estadoInsignia));
+        fila.add(etiqueta);
+        return fila;
     }
 }
