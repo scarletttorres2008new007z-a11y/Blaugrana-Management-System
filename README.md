@@ -38,7 +38,8 @@ Blaugrana-Management-System/
 │   ├── 02_crear_tablas.sql
 │   ├── 03_crear_relaciones.sql
 │   ├── 04_datos_demo.sql
-│   └── 05_consultas_reportes.sql
+│   ├── 05_consultas_reportes.sql
+│   └── 06_mejoras_integridad.sql
 └── src/main/java/sv/udb/blaugrana/
     ├── Main.java
     ├── config/        (conexión JDBC)
@@ -65,6 +66,12 @@ Microsoft SQL Server:
    egresos y presupuesto).
 5. `05_consultas_reportes.sql` – consultas de referencia usadas por el
    módulo de reportes (opcional, solo para validación manual).
+6. `06_mejoras_integridad.sql` – agrega validaciones `CHECK`, restricciones
+   `UNIQUE` (evita participaciones y pagos duplicados), un índice que impide
+   dos contratos `VIGENTE` simultáneos para un mismo jugador, índices de
+   rendimiento y las tablas de referencia `AUDITORIA`, `TEMPORADA` y
+   `POSICION`. No requiere cambios en la aplicación Java; se puede ejecutar
+   sobre una base de datos que ya tenga cargados los datos de demostración.
 
 ### 2. Configuración de conexión
 
@@ -103,6 +110,20 @@ java -jar target/blaugrana-management-system.jar
   generadas en el periodo, menos las deducciones indicadas.
 - **Finanzas**: el balance general se calcula como la diferencia entre el
   total de ingresos y el total de egresos registrados.
+
+## Integridad de datos (`06_mejoras_integridad.sql`)
+
+- Un jugador no puede tener dos contratos `VIGENTE` al mismo tiempo, ni dos
+  registros de participación para el mismo partido, ni dos pagos para el
+  mismo periodo — la base de datos los rechaza aunque la aplicación lo
+  permitiera.
+- El número de camiseta es único y debe estar entre 1 y 99; los montos de
+  salarios, ingresos, egresos y bonificaciones deben ser positivos, y el
+  total de un pago debe coincidir exactamente con salario + bonificaciones −
+  deducciones.
+- Se agregan las tablas `AUDITORIA`, `TEMPORADA` y `POSICION` como base
+  para una futura integración desde el backend (por ahora no las escribe
+  ningún módulo Java).
 
 ## Aviso
 
