@@ -5,8 +5,10 @@ import sv.udb.blaugrana.model.Jugador;
 import sv.udb.blaugrana.service.ContratoService;
 import sv.udb.blaugrana.service.JugadorService;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
+import sv.udb.blaugrana.util.FiltroTabla;
 import sv.udb.blaugrana.util.FormatoMoneda;
 import sv.udb.blaugrana.util.Mensajes;
+import sv.udb.blaugrana.util.PermisosUI;
 import sv.udb.blaugrana.util.Validaciones;
 import sv.udb.blaugrana.view.Refrescable;
 
@@ -33,6 +35,7 @@ public class ContratosPanel extends JPanel implements Refrescable {
         }
     };
     private final JTable tabla = new JTable(modeloTabla);
+    private final JTextField txtBuscar = new JTextField(20);
     private final JComboBox<Jugador> cmbJugador = new JComboBox<>();
     private final JTextField txtFechaInicio = new JTextField(10);
     private final JTextField txtFechaFin = new JTextField(10);
@@ -49,7 +52,7 @@ public class ContratosPanel extends JPanel implements Refrescable {
         JLabel titulo = new JLabel("CONTRATOS - Gestion de contratos de jugadores");
         titulo.setFont(new Font("SansSerif", Font.BOLD, 18));
         titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
-        add(titulo, BorderLayout.NORTH);
+        add(construirEncabezado(titulo), BorderLayout.NORTH);
 
         tabla.setRowHeight(24);
         tabla.getSelectionModel().addListSelectionListener(e -> {
@@ -57,8 +60,19 @@ public class ContratosPanel extends JPanel implements Refrescable {
                 cargarSeleccion();
             }
         });
+        FiltroTabla.activarBusqueda(txtBuscar, tabla, modeloTabla);
         add(new JScrollPane(tabla), BorderLayout.CENTER);
         add(construirFormulario(), BorderLayout.SOUTH);
+    }
+
+    private JPanel construirEncabezado(JLabel titulo) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(titulo, BorderLayout.NORTH);
+        JPanel panelBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panelBusqueda.add(new JLabel("Buscar:"));
+        panelBusqueda.add(txtBuscar);
+        panel.add(panelBusqueda, BorderLayout.SOUTH);
+        return panel;
     }
 
     private JPanel construirFormulario() {
@@ -85,6 +99,7 @@ public class ContratosPanel extends JPanel implements Refrescable {
         btnGuardar.addActionListener(e -> guardar());
         btnEliminar.addActionListener(e -> eliminar());
         btnRefrescar.addActionListener(e -> refrescar());
+        PermisosUI.deshabilitarSiSoloLectura(btnGuardar, btnEliminar);
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         panelBotones.add(btnNuevo);
@@ -113,7 +128,7 @@ public class ContratosPanel extends JPanel implements Refrescable {
         if (fila < 0) {
             return;
         }
-        idSeleccionado = (Integer) modeloTabla.getValueAt(fila, 0);
+        idSeleccionado = (Integer) modeloTabla.getValueAt(tabla.convertRowIndexToModel(fila), 0);
         try {
             contratoService.buscarPorId(idSeleccionado).ifPresent(c -> {
                 seleccionarJugadorEnCombo(c.getIdJugador());
@@ -124,7 +139,7 @@ public class ContratosPanel extends JPanel implements Refrescable {
                 cmbEstado.setSelectedItem(c.getEstado());
             });
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar el contrato:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar el contrato", e);
         }
     }
 
@@ -179,10 +194,10 @@ public class ContratosPanel extends JPanel implements Refrescable {
             Mensajes.error(this, "Las fechas deben tener el formato yyyy-mm-dd.");
         } catch (NumberFormatException e) {
             Mensajes.error(this, "El salario base debe ser un valor numerico valido.");
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             Mensajes.error(this, e.getMessage());
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo guardar el contrato:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo guardar el contrato", e);
         }
     }
 
@@ -199,7 +214,7 @@ public class ContratosPanel extends JPanel implements Refrescable {
             limpiarFormulario();
             refrescar();
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo eliminar el contrato:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo eliminar el contrato", e);
         }
     }
 
@@ -219,7 +234,7 @@ public class ContratosPanel extends JPanel implements Refrescable {
                         c.getFechaFin(), FormatoMoneda.formatear(c.getSalarioBase()), c.getEstado()});
             }
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar los contratos:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar los contratos", e);
         }
     }
 }

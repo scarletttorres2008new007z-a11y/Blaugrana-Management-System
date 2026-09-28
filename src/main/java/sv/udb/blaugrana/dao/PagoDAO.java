@@ -9,8 +9,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class PagoDAO {
 
@@ -18,6 +20,36 @@ public class PagoDAO {
             "SELECT p.id_pago, p.id_jugador, j.nombre + ' ' + j.apellido AS nombre_jugador, p.id_contrato, " +
             "       p.periodo, p.salario_base, p.bonificaciones, p.deducciones, p.total, p.fecha_pago, p.estado " +
             "FROM PAGO p JOIN JUGADOR j ON j.id_jugador = p.id_jugador";
+
+    public Optional<Pago> buscarPorId(int idPago) throws SQLException {
+        try (Connection con = ConexionBD.getConexion()) {
+            return buscarPorId(con, idPago);
+        }
+    }
+
+    public Optional<Pago> buscarPorId(Connection con, int idPago) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement(SELECT_BASE + " WHERE p.id_pago = ?")) {
+            ps.setInt(1, idPago);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapear(rs));
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    public boolean existePagoPorJugadorYPeriodo(int idJugador, String periodo) throws SQLException {
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement(
+                     "SELECT COUNT(*) FROM PAGO WHERE id_jugador = ? AND periodo = ?")) {
+            ps.setInt(1, idJugador);
+            ps.setString(2, periodo);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
 
     public List<Pago> listar() throws SQLException {
         List<Pago> lista = new ArrayList<>();
@@ -71,10 +103,19 @@ public class PagoDAO {
         }
     }
 
-    public void marcarPagado(int idPago, java.time.LocalDate fechaPago) throws SQLException {
+    public void marcarPagado(int idPago, LocalDate fechaPago) throws SQLException {
+        try (Connection con = ConexionBD.getConexion()) {
+            marcarPagado(con, idPago, fechaPago);
+        }
+    }
+
+    /**
+     * Variante transaccional: usa una conexion ya abierta por el llamador
+     * (que controla commit/rollback) en lugar de abrir una propia.
+     */
+    public void marcarPagado(Connection con, int idPago, LocalDate fechaPago) throws SQLException {
         String sql = "UPDATE PAGO SET estado = 'PAGADO', fecha_pago = ? WHERE id_pago = ?";
-        try (Connection con = ConexionBD.getConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setDate(1, Date.valueOf(fechaPago));
             ps.setInt(2, idPago);
             ps.executeUpdate();

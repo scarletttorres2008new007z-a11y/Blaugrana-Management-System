@@ -4,7 +4,9 @@ import sv.udb.blaugrana.model.Partido;
 import sv.udb.blaugrana.service.BonificacionService;
 import sv.udb.blaugrana.service.PartidoService;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
+import sv.udb.blaugrana.util.FiltroTabla;
 import sv.udb.blaugrana.util.Mensajes;
+import sv.udb.blaugrana.util.PermisosUI;
 import sv.udb.blaugrana.util.Validaciones;
 import sv.udb.blaugrana.view.Refrescable;
 
@@ -30,6 +32,7 @@ public class PartidosPanel extends JPanel implements Refrescable {
         }
     };
     private final JTable tabla = new JTable(modeloTabla);
+    private final JTextField txtBuscar = new JTextField(20);
 
     private final JTextField txtCompeticion = new JTextField(16);
     private final JTextField txtFecha = new JTextField(10);
@@ -48,7 +51,7 @@ public class PartidosPanel extends JPanel implements Refrescable {
         JLabel titulo = new JLabel("PARTIDOS - Calendario y resultados de FC Barcelona");
         titulo.setFont(new Font("SansSerif", Font.BOLD, 18));
         titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
-        add(titulo, BorderLayout.NORTH);
+        add(construirEncabezado(titulo), BorderLayout.NORTH);
 
         tabla.setRowHeight(24);
         tabla.getSelectionModel().addListSelectionListener(e -> {
@@ -56,8 +59,19 @@ public class PartidosPanel extends JPanel implements Refrescable {
                 cargarSeleccion();
             }
         });
+        FiltroTabla.activarBusqueda(txtBuscar, tabla, modeloTabla);
         add(new JScrollPane(tabla), BorderLayout.CENTER);
         add(construirFormulario(), BorderLayout.SOUTH);
+    }
+
+    private JPanel construirEncabezado(JLabel titulo) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(titulo, BorderLayout.NORTH);
+        JPanel panelBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panelBusqueda.add(new JLabel("Buscar:"));
+        panelBusqueda.add(txtBuscar);
+        panel.add(panelBusqueda, BorderLayout.SOUTH);
+        return panel;
     }
 
     private JPanel construirFormulario() {
@@ -88,6 +102,7 @@ public class PartidosPanel extends JPanel implements Refrescable {
         btnEliminar.addActionListener(e -> eliminar());
         btnGenerarBonificaciones.addActionListener(e -> generarBonificaciones());
         btnRefrescar.addActionListener(e -> refrescar());
+        PermisosUI.deshabilitarSiSoloLectura(btnGuardar, btnEliminar, btnGenerarBonificaciones);
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         panelBotones.add(btnNuevo);
@@ -117,7 +132,7 @@ public class PartidosPanel extends JPanel implements Refrescable {
         if (fila < 0) {
             return;
         }
-        idSeleccionado = (Integer) modeloTabla.getValueAt(fila, 0);
+        idSeleccionado = (Integer) modeloTabla.getValueAt(tabla.convertRowIndexToModel(fila), 0);
         try {
             partidoService.buscarPorId(idSeleccionado).ifPresent(p -> {
                 txtCompeticion.setText(p.getCompeticion());
@@ -129,7 +144,7 @@ public class PartidosPanel extends JPanel implements Refrescable {
                 cmbEstado.setSelectedItem(p.getEstado());
             });
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar el partido:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar el partido", e);
         }
     }
 
@@ -172,7 +187,7 @@ public class PartidosPanel extends JPanel implements Refrescable {
         } catch (NumberFormatException e) {
             Mensajes.error(this, "Los goles deben ser valores numericos.");
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo guardar el partido:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo guardar el partido", e);
         }
     }
 
@@ -189,7 +204,7 @@ public class PartidosPanel extends JPanel implements Refrescable {
             limpiarFormulario();
             refrescar();
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo eliminar el partido:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo eliminar el partido", e);
         }
     }
 
@@ -204,7 +219,7 @@ public class PartidosPanel extends JPanel implements Refrescable {
         } catch (IllegalStateException | IllegalArgumentException e) {
             Mensajes.error(this, e.getMessage());
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudieron generar las bonificaciones:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudieron generar las bonificaciones", e);
         }
     }
 
@@ -218,7 +233,7 @@ public class PartidosPanel extends JPanel implements Refrescable {
                         p.getCondicion(), p.getMarcador(), p.getResultado(), p.getEstado()});
             }
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar los partidos:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar los partidos", e);
         }
     }
 }

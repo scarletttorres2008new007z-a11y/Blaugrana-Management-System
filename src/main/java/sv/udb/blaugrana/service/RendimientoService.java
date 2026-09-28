@@ -24,6 +24,9 @@ public class RendimientoService {
 
     public void guardar(ParticipacionPartido participacion) throws SQLException {
         if (participacion.getIdParticipacion() == 0) {
+            if (participacionDAO.existeParticipacion(participacion.getIdPartido(), participacion.getIdJugador())) {
+                throw new IllegalStateException("Este jugador ya tiene una participación registrada en este partido.");
+            }
             participacionDAO.insertar(participacion);
         } else {
             participacionDAO.actualizar(participacion);

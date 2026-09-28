@@ -5,8 +5,10 @@ import sv.udb.blaugrana.model.Jugador;
 import sv.udb.blaugrana.service.BonificacionService;
 import sv.udb.blaugrana.service.JugadorService;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
+import sv.udb.blaugrana.util.FiltroTabla;
 import sv.udb.blaugrana.util.FormatoMoneda;
 import sv.udb.blaugrana.util.Mensajes;
+import sv.udb.blaugrana.util.PermisosUI;
 import sv.udb.blaugrana.util.Validaciones;
 import sv.udb.blaugrana.view.Refrescable;
 
@@ -31,6 +33,7 @@ public class BonificacionesPanel extends JPanel implements Refrescable {
         }
     };
     private final JTable tabla = new JTable(modeloTabla);
+    private final JTextField txtBuscar = new JTextField(20);
 
     private final JComboBox<Jugador> cmbJugador = new JComboBox<>();
     private final JTextField txtConcepto = new JTextField(20);
@@ -44,11 +47,22 @@ public class BonificacionesPanel extends JPanel implements Refrescable {
         JLabel titulo = new JLabel("BONIFICACIONES - Incentivos economicos por rendimiento");
         titulo.setFont(new Font("SansSerif", Font.BOLD, 18));
         titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
-        add(titulo, BorderLayout.NORTH);
+        add(construirEncabezado(titulo), BorderLayout.NORTH);
 
         tabla.setRowHeight(24);
+        FiltroTabla.activarBusqueda(txtBuscar, tabla, modeloTabla);
         add(new JScrollPane(tabla), BorderLayout.CENTER);
         add(construirFormulario(), BorderLayout.SOUTH);
+    }
+
+    private JPanel construirEncabezado(JLabel titulo) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(titulo, BorderLayout.NORTH);
+        JPanel panelBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panelBusqueda.add(new JLabel("Buscar:"));
+        panelBusqueda.add(txtBuscar);
+        panel.add(panelBusqueda, BorderLayout.SOUTH);
+        return panel;
     }
 
     private JPanel construirFormulario() {
@@ -71,6 +85,7 @@ public class BonificacionesPanel extends JPanel implements Refrescable {
         btnAgregar.addActionListener(e -> agregar());
         btnEliminar.addActionListener(e -> eliminar());
         btnRefrescar.addActionListener(e -> refrescar());
+        PermisosUI.deshabilitarSiSoloLectura(btnAgregar, btnEliminar);
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         panelBotones.add(new JLabel("Total del jugador seleccionado: "));
@@ -120,7 +135,7 @@ public class BonificacionesPanel extends JPanel implements Refrescable {
         } catch (NumberFormatException e) {
             Mensajes.error(this, "El valor debe ser numerico.");
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo registrar la bonificacion:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo registrar la bonificacion", e);
         }
     }
 
@@ -130,7 +145,7 @@ public class BonificacionesPanel extends JPanel implements Refrescable {
             Mensajes.error(this, "Seleccione una bonificacion de la tabla.");
             return;
         }
-        Integer id = (Integer) modeloTabla.getValueAt(fila, 0);
+        Integer id = (Integer) modeloTabla.getValueAt(tabla.convertRowIndexToModel(fila), 0);
         if (!Mensajes.confirmar(this, "¿Desea eliminar la bonificacion seleccionada?")) {
             return;
         }
@@ -138,7 +153,7 @@ public class BonificacionesPanel extends JPanel implements Refrescable {
             bonificacionService.eliminar(id);
             refrescar();
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo eliminar la bonificacion:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo eliminar la bonificacion", e);
         }
     }
 
@@ -179,7 +194,7 @@ public class BonificacionesPanel extends JPanel implements Refrescable {
             }
             actualizarTotalJugador();
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar las bonificaciones:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar las bonificaciones", e);
         }
     }
 }

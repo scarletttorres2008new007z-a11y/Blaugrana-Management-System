@@ -6,6 +6,7 @@ import sv.udb.blaugrana.service.PresupuestoService;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
 import sv.udb.blaugrana.util.FormatoMoneda;
 import sv.udb.blaugrana.util.Mensajes;
+import sv.udb.blaugrana.util.PermisosUI;
 import sv.udb.blaugrana.util.Validaciones;
 import sv.udb.blaugrana.view.Refrescable;
 
@@ -81,6 +82,7 @@ public class PresupuestoPanel extends JPanel implements Refrescable {
 
         JButton btnAgregarDetalle = new JButton("Agregar categoria al presupuesto");
         btnAgregarDetalle.addActionListener(e -> agregarDetalle());
+        PermisosUI.deshabilitarSiSoloLectura(btnNuevoPresupuesto, btnAgregarDetalle);
 
         JButton btnRefrescar = new JButton("Refrescar");
         btnRefrescar.addActionListener(e -> refrescar());
@@ -119,7 +121,7 @@ public class PresupuestoPanel extends JPanel implements Refrescable {
             txtNombrePresupuesto.setText("");
             refrescar();
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo crear el presupuesto:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo crear el presupuesto", e);
         }
     }
 
@@ -148,7 +150,7 @@ public class PresupuestoPanel extends JPanel implements Refrescable {
         } catch (NumberFormatException e) {
             Mensajes.error(this, "Los montos deben ser numericos.");
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo agregar el detalle:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo agregar el detalle", e);
         }
     }
 
@@ -166,7 +168,7 @@ public class PresupuestoPanel extends JPanel implements Refrescable {
                         FormatoMoneda.formatear(d.getDisponible())});
             }
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar el detalle del presupuesto:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar el detalle del presupuesto", e);
         }
     }
 
@@ -187,7 +189,7 @@ public class PresupuestoPanel extends JPanel implements Refrescable {
             }
             cargarDetalle();
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar los presupuestos:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar los presupuestos", e);
         }
     }
 }

@@ -4,6 +4,7 @@ import sv.udb.blaugrana.model.Rol;
 import sv.udb.blaugrana.model.Usuario;
 import sv.udb.blaugrana.service.UsuarioService;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
+import sv.udb.blaugrana.util.FiltroTabla;
 import sv.udb.blaugrana.util.Mensajes;
 import sv.udb.blaugrana.util.Validaciones;
 import sv.udb.blaugrana.view.Refrescable;
@@ -27,6 +28,7 @@ public class UsuariosPanel extends JPanel implements Refrescable {
         }
     };
     private final JTable tabla = new JTable(modeloTabla);
+    private final JTextField txtBuscar = new JTextField(20);
 
     private final JTextField txtNombreUsuario = new JTextField(14);
     private final JPasswordField txtContrasena = new JPasswordField(14);
@@ -44,7 +46,7 @@ public class UsuariosPanel extends JPanel implements Refrescable {
         JLabel titulo = new JLabel("USUARIOS - Administracion de accesos al sistema");
         titulo.setFont(new Font("SansSerif", Font.BOLD, 18));
         titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
-        add(titulo, BorderLayout.NORTH);
+        add(construirEncabezado(titulo), BorderLayout.NORTH);
 
         tabla.setRowHeight(24);
         tabla.getSelectionModel().addListSelectionListener(e -> {
@@ -52,8 +54,19 @@ public class UsuariosPanel extends JPanel implements Refrescable {
                 cargarSeleccion();
             }
         });
+        FiltroTabla.activarBusqueda(txtBuscar, tabla, modeloTabla);
         add(new JScrollPane(tabla), BorderLayout.CENTER);
         add(construirFormulario(), BorderLayout.SOUTH);
+    }
+
+    private JPanel construirEncabezado(JLabel titulo) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(titulo, BorderLayout.NORTH);
+        JPanel panelBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panelBusqueda.add(new JLabel("Buscar:"));
+        panelBusqueda.add(txtBuscar);
+        panel.add(panelBusqueda, BorderLayout.SOUTH);
+        return panel;
     }
 
     private JPanel construirFormulario() {
@@ -108,7 +121,7 @@ public class UsuariosPanel extends JPanel implements Refrescable {
         if (fila < 0) {
             return;
         }
-        idSeleccionado = (Integer) modeloTabla.getValueAt(fila, 0);
+        idSeleccionado = (Integer) modeloTabla.getValueAt(tabla.convertRowIndexToModel(fila), 0);
         try {
             usuarioService.listar().stream()
                     .filter(u -> u.getIdUsuario() == idSeleccionado)
@@ -123,7 +136,7 @@ public class UsuariosPanel extends JPanel implements Refrescable {
                         cmbEstado.setSelectedItem(u.getEstado());
                     });
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar el usuario:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar el usuario", e);
         }
     }
 
@@ -185,7 +198,7 @@ public class UsuariosPanel extends JPanel implements Refrescable {
             limpiarFormulario();
             refrescar();
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo guardar el usuario:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo guardar el usuario", e);
         }
     }
 
@@ -202,7 +215,7 @@ public class UsuariosPanel extends JPanel implements Refrescable {
             limpiarFormulario();
             refrescar();
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo eliminar el usuario:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo eliminar el usuario", e);
         }
     }
 
@@ -221,7 +234,7 @@ public class UsuariosPanel extends JPanel implements Refrescable {
                         u.getNombreRol(), u.getCorreo(), u.getEstado()});
             }
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar los usuarios:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar los usuarios", e);
         }
     }
 }

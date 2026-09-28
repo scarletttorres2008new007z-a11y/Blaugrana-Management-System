@@ -40,9 +40,18 @@ public class EgresoDAO {
     }
 
     public void insertar(Egreso egreso) throws SQLException {
+        try (Connection con = ConexionBD.getConexion()) {
+            insertar(con, egreso);
+        }
+    }
+
+    /**
+     * Variante transaccional: usa una conexion ya abierta por el llamador
+     * (que controla commit/rollback) en lugar de abrir una propia.
+     */
+    public void insertar(Connection con, Egreso egreso) throws SQLException {
         String sql = "INSERT INTO EGRESO (id_categoria_egreso, descripcion, monto, fecha) VALUES (?, ?, ?, ?)";
-        try (Connection con = ConexionBD.getConexion();
-             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             establecerParametros(ps, egreso);
             ps.executeUpdate();
             try (ResultSet claves = ps.getGeneratedKeys()) {

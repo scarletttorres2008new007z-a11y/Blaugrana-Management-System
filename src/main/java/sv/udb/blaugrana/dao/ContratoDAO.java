@@ -60,6 +60,21 @@ public class ContratoDAO {
         return Optional.empty();
     }
 
+    public boolean existeContratoVigente(int idJugador, Integer idContratoExcluir) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM CONTRATO WHERE id_jugador = ? AND estado = 'VIGENTE'"
+                + (idContratoExcluir != null ? " AND id_contrato <> ?" : "");
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idJugador);
+            if (idContratoExcluir != null) {
+                ps.setInt(2, idContratoExcluir);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
     public int contarVigentes() throws SQLException {
         try (Connection con = ConexionBD.getConexion();
              PreparedStatement ps = con.prepareStatement("SELECT COUNT(*) FROM CONTRATO WHERE estado = 'VIGENTE'");

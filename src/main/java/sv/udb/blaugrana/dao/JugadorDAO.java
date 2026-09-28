@@ -56,6 +56,21 @@ public class JugadorDAO {
         return Optional.empty();
     }
 
+    public boolean existeNumeroCamiseta(int numeroCamiseta, Integer idJugadorExcluir) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM JUGADOR WHERE numero_camiseta = ?"
+                + (idJugadorExcluir != null ? " AND id_jugador <> ?" : "");
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, numeroCamiseta);
+            if (idJugadorExcluir != null) {
+                ps.setInt(2, idJugadorExcluir);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
     public int contarActivos() throws SQLException {
         try (Connection con = ConexionBD.getConexion();
              PreparedStatement ps = con.prepareStatement("SELECT COUNT(*) FROM JUGADOR WHERE estado = 'ACTIVO'");

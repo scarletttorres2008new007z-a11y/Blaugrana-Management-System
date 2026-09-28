@@ -79,7 +79,7 @@ public class ReportesPanel extends JPanel implements Refrescable {
                 default -> { }
             }
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo generar el reporte:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo generar el reporte", e);
         }
     }
 

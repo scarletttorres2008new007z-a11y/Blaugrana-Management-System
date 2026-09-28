@@ -25,6 +25,14 @@ public final class SesionUsuario {
         return usuarioActivo != null && "Administrador".equalsIgnoreCase(usuarioActivo.getNombreRol());
     }
 
+    public static boolean puedeAcceder(String modulo) {
+        return usuarioActivo != null && Permisos.puedeAcceder(usuarioActivo.getNombreRol(), modulo);
+    }
+
+    public static boolean esSoloLectura() {
+        return usuarioActivo != null && Permisos.esSoloLectura(usuarioActivo.getNombreRol());
+    }
+
     public static void cerrar() {
         usuarioActivo = null;
     }

@@ -7,8 +7,10 @@ import sv.udb.blaugrana.service.ContratoService;
 import sv.udb.blaugrana.service.JugadorService;
 import sv.udb.blaugrana.service.PagoService;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
+import sv.udb.blaugrana.util.FiltroTabla;
 import sv.udb.blaugrana.util.FormatoMoneda;
 import sv.udb.blaugrana.util.Mensajes;
+import sv.udb.blaugrana.util.PermisosUI;
 import sv.udb.blaugrana.util.Validaciones;
 import sv.udb.blaugrana.view.Refrescable;
 
@@ -37,6 +39,7 @@ public class PagosPanel extends JPanel implements Refrescable {
         }
     };
     private final JTable tabla = new JTable(modeloTabla);
+    private final JTextField txtBuscar = new JTextField(20);
 
     private final JComboBox<Jugador> cmbJugador = new JComboBox<>();
     private final JTextField txtPeriodo = new JTextField(8);
@@ -49,11 +52,22 @@ public class PagosPanel extends JPanel implements Refrescable {
         JLabel titulo = new JLabel("PAGOS - Planilla de jugadores");
         titulo.setFont(new Font("SansSerif", Font.BOLD, 18));
         titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
-        add(titulo, BorderLayout.NORTH);
+        add(construirEncabezado(titulo), BorderLayout.NORTH);
 
         tabla.setRowHeight(24);
+        FiltroTabla.activarBusqueda(txtBuscar, tabla, modeloTabla);
         add(new JScrollPane(tabla), BorderLayout.CENTER);
         add(construirFormulario(), BorderLayout.SOUTH);
+    }
+
+    private JPanel construirEncabezado(JLabel titulo) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(titulo, BorderLayout.NORTH);
+        JPanel panelBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panelBusqueda.add(new JLabel("Buscar:"));
+        panelBusqueda.add(txtBuscar);
+        panel.add(panelBusqueda, BorderLayout.SOUTH);
+        return panel;
     }
 
     private JPanel construirFormulario() {
@@ -76,6 +90,7 @@ public class PagosPanel extends JPanel implements Refrescable {
         btnMarcarPagado.addActionListener(e -> marcarPagado());
         btnEliminar.addActionListener(e -> eliminar());
         btnRefrescar.addActionListener(e -> refrescar());
+        PermisosUI.deshabilitarSiSoloLectura(btnGenerar, btnMarcarPagado, btnEliminar);
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         panelBotones.add(btnGenerar);
@@ -118,10 +133,10 @@ public class PagosPanel extends JPanel implements Refrescable {
             refrescar();
         } catch (NumberFormatException e) {
             Mensajes.error(this, "Las deducciones deben ser un valor numerico.");
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             Mensajes.error(this, e.getMessage());
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo generar el pago:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo generar el pago", e);
         }
     }
 
@@ -131,12 +146,14 @@ public class PagosPanel extends JPanel implements Refrescable {
             Mensajes.error(this, "Seleccione un pago de la tabla.");
             return;
         }
-        Integer id = (Integer) modeloTabla.getValueAt(fila, 0);
+        Integer id = (Integer) modeloTabla.getValueAt(tabla.convertRowIndexToModel(fila), 0);
         try {
             pagoService.marcarComoPagado(id);
             refrescar();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            Mensajes.error(this, e.getMessage());
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo actualizar el pago:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo actualizar el pago", e);
         }
     }
 
@@ -146,7 +163,7 @@ public class PagosPanel extends JPanel implements Refrescable {
             Mensajes.error(this, "Seleccione un pago de la tabla.");
             return;
         }
-        Integer id = (Integer) modeloTabla.getValueAt(fila, 0);
+        Integer id = (Integer) modeloTabla.getValueAt(tabla.convertRowIndexToModel(fila), 0);
         if (!Mensajes.confirmar(this, "¿Desea eliminar el pago seleccionado?")) {
             return;
         }
@@ -154,7 +171,7 @@ public class PagosPanel extends JPanel implements Refrescable {
             pagoService.eliminar(id);
             refrescar();
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo eliminar el pago:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo eliminar el pago", e);
         }
     }
 
@@ -185,7 +202,7 @@ public class PagosPanel extends JPanel implements Refrescable {
                         FormatoMoneda.formatear(p.getDeducciones()), FormatoMoneda.formatear(p.getTotal()), p.getEstado()});
             }
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar los pagos:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar los pagos", e);
         }
     }
 }

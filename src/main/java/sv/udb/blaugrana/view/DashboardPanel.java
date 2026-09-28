@@ -157,7 +157,7 @@ public class DashboardPanel extends JPanel implements Refrescable {
             lblEgresos.setText(FormatoMoneda.formatear(egresos));
             lblBalance.setText(FormatoMoneda.formatear(balance));
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar el dashboard:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar el dashboard", e);
         }
     }
 }

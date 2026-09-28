@@ -39,7 +39,8 @@ Blaugrana-Management-System/
 │   ├── 03_crear_relaciones.sql
 │   ├── 04_datos_demo.sql
 │   ├── 05_consultas_reportes.sql
-│   └── 06_mejoras_integridad.sql
+│   ├── 06_mejoras_integridad.sql
+│   └── 07_usuarios_demo_roles.sql
 └── src/main/java/sv/udb/blaugrana/
     ├── Main.java
     ├── config/        (conexión JDBC)
@@ -72,6 +73,9 @@ Microsoft SQL Server:
    rendimiento y las tablas de referencia `AUDITORIA`, `TEMPORADA` y
    `POSICION`. No requiere cambios en la aplicación Java; se puede ejecutar
    sobre una base de datos que ya tenga cargados los datos de demostración.
+7. `07_usuarios_demo_roles.sql` – crea un usuario de demostración para cada
+   rol distinto de Administrador (Directivo, Gestor Deportivo, Gestor
+   Financiero), útil para probar el control de permisos por rol.
 
 ### 2. Configuración de conexión
 
@@ -93,11 +97,16 @@ mvn package
 java -jar target/blaugrana-management-system.jar
 ```
 
-### Usuario de demostración
+### Usuarios de demostración
 
-| Usuario | Contraseña |
-|---------|------------|
-| admin   | admin123   |
+| Usuario     | Contraseña      | Rol                |
+|-------------|-----------------|--------------------|
+| admin       | admin123        | Administrador      |
+| directivo   | directivo123    | Directivo          |
+| deportivo   | deportivo123    | Gestor Deportivo   |
+| financiero  | financiero123   | Gestor Financiero  |
+
+Los tres últimos se crean con `07_usuarios_demo_roles.sql`.
 
 ## Reglas de negocio destacadas
 
@@ -110,6 +119,52 @@ java -jar target/blaugrana-management-system.jar
   generadas en el periodo, menos las deducciones indicadas.
 - **Finanzas**: el balance general se calcula como la diferencia entre el
   total de ingresos y el total de egresos registrados.
+
+## Permisos por rol
+
+El menú lateral y los módulos accesibles dependen del rol del usuario
+autenticado (`sv.udb.blaugrana.session.Permisos`):
+
+| Módulo | Administrador | Directivo | Gestor Deportivo | Gestor Financiero |
+|---|:---:|:---:|:---:|:---:|
+| Dashboard | ✔ | ✔ | ✔ | ✔ |
+| Jugadores / Personal | ✔ | ✔ | Jugadores | — |
+| Contratos | ✔ | ✔ | — | ✔ |
+| Partidos / Rendimiento | ✔ | ✔ | ✔ | — |
+| Bonificaciones | ✔ | ✔ | ✔ | ✔ |
+| Pagos / Ingresos / Egresos / Presupuesto | ✔ | ✔ | — | ✔ |
+| Reportes | ✔ | ✔ | ✔ | ✔ |
+| Usuarios | ✔ | — | — | — |
+
+El rol **Directivo** ve los mismos módulos que el Administrador (salvo
+Usuarios) pero en modo de **solo consulta**: los botones que crean,
+modifican o eliminan información quedan deshabilitados.
+
+## Reglas de negocio y validaciones del backend
+
+- **Evita duplicados antes de tocar la base de datos**: no se puede generar
+  dos veces el pago de un jugador para el mismo periodo, ni registrar dos
+  veces la participación de un jugador en el mismo partido, ni crear un
+  segundo contrato `VIGENTE` para un jugador que ya tiene uno, ni repetir un
+  número de camiseta. Estas mismas reglas están respaldadas por las
+  restricciones `UNIQUE`/`CHECK` de `06_mejoras_integridad.sql` como última
+  línea de defensa.
+- **Transacciones**: generar las bonificaciones de un partido (varias filas)
+  y marcar un pago como pagado (que además genera su egreso) se ejecutan
+  como una sola transacción JDBC — si algo falla a mitad de camino, no queda
+  ningún registro parcial.
+- **Pago → Egreso automático**: al marcar un pago como `PAGADO`, el sistema
+  registra automáticamente un egreso en la categoría "Salarios" por el
+  mismo monto, manteniendo la situación financiera del club sincronizada
+  sin pasos manuales adicionales.
+- **Mensajes de error amigables**: las violaciones de `CHECK`, `UNIQUE` o
+  llaves foráneas que SQL Server rechaza se traducen a mensajes en español
+  entendibles (`sv.udb.blaugrana.util.ErroresBD`) en lugar de mostrar la
+  excepción técnica cruda.
+- **Búsqueda en tablas**: los listados principales (jugadores, personal,
+  contratos, partidos, pagos, ingresos, egresos, bonificaciones, usuarios)
+  tienen un campo de búsqueda que filtra las filas en tiempo real, sin
+  distinguir mayúsculas/minúsculas ni acentos.
 
 ## Integridad de datos (`06_mejoras_integridad.sql`)
 

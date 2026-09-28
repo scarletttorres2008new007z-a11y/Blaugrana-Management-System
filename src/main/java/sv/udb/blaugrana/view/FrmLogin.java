@@ -120,7 +120,7 @@ public class FrmLogin extends JFrame {
             new FrmPrincipal().setVisible(true);
             dispose();
         } catch (SQLException ex) {
-            Mensajes.error(this, "No fue posible conectar con la base de datos:\n" + ex.getMessage());
+            Mensajes.error(this, "No fue posible conectar con la base de datos", ex);
         }
     }
 }

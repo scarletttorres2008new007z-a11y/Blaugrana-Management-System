@@ -4,8 +4,10 @@ import sv.udb.blaugrana.model.CategoriaIngreso;
 import sv.udb.blaugrana.model.Ingreso;
 import sv.udb.blaugrana.service.FinanzasService;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
+import sv.udb.blaugrana.util.FiltroTabla;
 import sv.udb.blaugrana.util.FormatoMoneda;
 import sv.udb.blaugrana.util.Mensajes;
+import sv.udb.blaugrana.util.PermisosUI;
 import sv.udb.blaugrana.util.Validaciones;
 import sv.udb.blaugrana.view.Refrescable;
 
@@ -30,6 +32,7 @@ public class IngresosPanel extends JPanel implements Refrescable {
         }
     };
     private final JTable tabla = new JTable(modeloTabla);
+    private final JTextField txtBuscar = new JTextField(20);
 
     private final JComboBox<CategoriaIngreso> cmbCategoria = new JComboBox<>();
     private final JTextField txtDescripcion = new JTextField(20);
@@ -46,7 +49,7 @@ public class IngresosPanel extends JPanel implements Refrescable {
         JLabel titulo = new JLabel("INGRESOS - Fuentes de ingreso del club");
         titulo.setFont(new Font("SansSerif", Font.BOLD, 18));
         titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
-        add(titulo, BorderLayout.NORTH);
+        add(construirEncabezado(titulo), BorderLayout.NORTH);
 
         tabla.setRowHeight(24);
         tabla.getSelectionModel().addListSelectionListener(e -> {
@@ -54,8 +57,19 @@ public class IngresosPanel extends JPanel implements Refrescable {
                 cargarSeleccion();
             }
         });
+        FiltroTabla.activarBusqueda(txtBuscar, tabla, modeloTabla);
         add(new JScrollPane(tabla), BorderLayout.CENTER);
         add(construirFormulario(), BorderLayout.SOUTH);
+    }
+
+    private JPanel construirEncabezado(JLabel titulo) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(titulo, BorderLayout.NORTH);
+        JPanel panelBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panelBusqueda.add(new JLabel("Buscar:"));
+        panelBusqueda.add(txtBuscar);
+        panel.add(panelBusqueda, BorderLayout.SOUTH);
+        return panel;
     }
 
     private JPanel construirFormulario() {
@@ -79,6 +93,7 @@ public class IngresosPanel extends JPanel implements Refrescable {
         btnGuardar.addActionListener(e -> guardar());
         btnEliminar.addActionListener(e -> eliminar());
         btnRefrescar.addActionListener(e -> refrescar());
+        PermisosUI.deshabilitarSiSoloLectura(btnGuardar, btnEliminar);
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         panelBotones.add(new JLabel("Total ingresos: "));
@@ -109,7 +124,7 @@ public class IngresosPanel extends JPanel implements Refrescable {
         if (fila < 0) {
             return;
         }
-        idSeleccionado = (Integer) modeloTabla.getValueAt(fila, 0);
+        idSeleccionado = (Integer) modeloTabla.getValueAt(tabla.convertRowIndexToModel(fila), 0);
         try {
             finanzasService.listarIngresos().stream()
                     .filter(i -> i.getIdIngreso() == idSeleccionado)
@@ -121,7 +136,7 @@ public class IngresosPanel extends JPanel implements Refrescable {
                         txtFecha.setText(i.getFecha().toString());
                     });
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar el ingreso:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar el ingreso", e);
         }
     }
 
@@ -171,7 +186,7 @@ public class IngresosPanel extends JPanel implements Refrescable {
         } catch (NumberFormatException e) {
             Mensajes.error(this, "El monto debe ser un valor numerico.");
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo guardar el ingreso:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo guardar el ingreso", e);
         }
     }
 
@@ -188,7 +203,7 @@ public class IngresosPanel extends JPanel implements Refrescable {
             limpiarFormulario();
             refrescar();
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo eliminar el ingreso:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo eliminar el ingreso", e);
         }
     }
 
@@ -208,7 +223,7 @@ public class IngresosPanel extends JPanel implements Refrescable {
             }
             lblTotal.setText(FormatoMoneda.formatear(finanzasService.totalIngresos()));
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar los ingresos:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar los ingresos", e);
         }
     }
 }

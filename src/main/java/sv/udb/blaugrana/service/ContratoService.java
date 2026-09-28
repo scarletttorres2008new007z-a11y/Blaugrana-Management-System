@@ -28,9 +28,18 @@ public class ContratoService {
     }
 
     public void guardar(Contrato contrato) throws SQLException {
-        if (contrato.getFechaFin().isBefore(contrato.getFechaInicio())) {
-            throw new IllegalArgumentException("La fecha de finalizacion no puede ser anterior a la fecha de inicio.");
+        if (!contrato.getFechaFin().isAfter(contrato.getFechaInicio())) {
+            throw new IllegalArgumentException("La fecha de finalización debe ser posterior a la fecha de inicio.");
         }
+
+        if ("VIGENTE".equals(contrato.getEstado())) {
+            Integer idActual = contrato.getIdContrato() == 0 ? null : contrato.getIdContrato();
+            if (contratoDAO.existeContratoVigente(contrato.getIdJugador(), idActual)) {
+                throw new IllegalStateException("Este jugador ya tiene un contrato vigente. Finalice o rescinda "
+                        + "el contrato actual antes de crear uno nuevo.");
+            }
+        }
+
         if (contrato.getIdContrato() == 0) {
             contratoDAO.insertar(contrato);
         } else {

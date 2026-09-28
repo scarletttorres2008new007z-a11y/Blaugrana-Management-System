@@ -48,8 +48,13 @@ public class BonificacionDAO {
     }
 
     public boolean existeParaPartido(int idPartido) throws SQLException {
-        try (Connection con = ConexionBD.getConexion();
-             PreparedStatement ps = con.prepareStatement("SELECT COUNT(*) FROM BONIFICACION WHERE id_partido = ?")) {
+        try (Connection con = ConexionBD.getConexion()) {
+            return existeParaPartido(con, idPartido);
+        }
+    }
+
+    public boolean existeParaPartido(Connection con, int idPartido) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement("SELECT COUNT(*) FROM BONIFICACION WHERE id_partido = ?")) {
             ps.setInt(1, idPartido);
             try (ResultSet rs = ps.executeQuery()) {
                 return rs.next() && rs.getInt(1) > 0;
@@ -81,10 +86,19 @@ public class BonificacionDAO {
     }
 
     public void insertar(Bonificacion bonificacion) throws SQLException {
+        try (Connection con = ConexionBD.getConexion()) {
+            insertar(con, bonificacion);
+        }
+    }
+
+    /**
+     * Variante transaccional: usa una conexion ya abierta por el llamador
+     * (que controla commit/rollback) en lugar de abrir una propia.
+     */
+    public void insertar(Connection con, Bonificacion bonificacion) throws SQLException {
         String sql = "INSERT INTO BONIFICACION (id_jugador, id_partido, concepto, valor, fecha_generacion) " +
                 "VALUES (?, ?, ?, ?, ?)";
-        try (Connection con = ConexionBD.getConexion();
-             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, bonificacion.getIdJugador());
             if (bonificacion.getIdPartido() != null) {
                 ps.setInt(2, bonificacion.getIdPartido());

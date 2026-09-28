@@ -19,13 +19,13 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class FrmPrincipal extends JFrame {
 
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel panelContenido = new JPanel(cardLayout);
     private final Map<String, JComponent> paneles = new LinkedHashMap<>();
-    private DashboardPanel dashboardPanel;
 
     public FrmPrincipal() {
         super("Blaugrana Management System");
@@ -37,34 +37,35 @@ public class FrmPrincipal extends JFrame {
     }
 
     private void construirInterfaz() {
-        JPanel panelRaiz = new JPanel(new BorderLayout());
+        panelContenido.setBackground(ColoresBlaugrana.GRIS_CLARO);
 
+        registrarPanelSiPermitido("dashboard", DashboardPanel::new);
+        registrarPanelSiPermitido("jugadores", JugadoresPanel::new);
+        registrarPanelSiPermitido("personal", PersonalPanel::new);
+        registrarPanelSiPermitido("contratos", ContratosPanel::new);
+        registrarPanelSiPermitido("partidos", PartidosPanel::new);
+        registrarPanelSiPermitido("rendimiento", RendimientoPanel::new);
+        registrarPanelSiPermitido("bonificaciones", BonificacionesPanel::new);
+        registrarPanelSiPermitido("ingresos", IngresosPanel::new);
+        registrarPanelSiPermitido("egresos", EgresosPanel::new);
+        registrarPanelSiPermitido("presupuesto", PresupuestoPanel::new);
+        registrarPanelSiPermitido("pagos", PagosPanel::new);
+        registrarPanelSiPermitido("reportes", ReportesPanel::new);
+        registrarPanelSiPermitido("usuarios", UsuariosPanel::new);
+
+        JPanel panelRaiz = new JPanel(new BorderLayout());
         panelRaiz.add(construirEncabezado(), BorderLayout.NORTH);
         panelRaiz.add(construirMenuLateral(), BorderLayout.WEST);
-
-        panelContenido.setBackground(ColoresBlaugrana.GRIS_CLARO);
-        registrarPanel("dashboard", dashboardPanel = new DashboardPanel());
-        registrarPanel("jugadores", new JugadoresPanel());
-        registrarPanel("personal", new PersonalPanel());
-        registrarPanel("contratos", new ContratosPanel());
-        registrarPanel("partidos", new PartidosPanel());
-        registrarPanel("rendimiento", new RendimientoPanel());
-        registrarPanel("bonificaciones", new BonificacionesPanel());
-        registrarPanel("ingresos", new IngresosPanel());
-        registrarPanel("egresos", new EgresosPanel());
-        registrarPanel("presupuesto", new PresupuestoPanel());
-        registrarPanel("pagos", new PagosPanel());
-        registrarPanel("reportes", new ReportesPanel());
-        if (SesionUsuario.esAdministrador()) {
-            registrarPanel("usuarios", new UsuariosPanel());
-        }
-
         panelRaiz.add(panelContenido, BorderLayout.CENTER);
         setContentPane(panelRaiz);
         mostrarPanel("dashboard");
     }
 
-    private void registrarPanel(String clave, JComponent panel) {
+    private void registrarPanelSiPermitido(String clave, Supplier<JComponent> fabricante) {
+        if (!SesionUsuario.puedeAcceder(clave)) {
+            return;
+        }
+        JComponent panel = fabricante.get();
         paneles.put(clave, panel);
         panelContenido.add(panel, clave);
     }
@@ -116,32 +117,15 @@ public class FrmPrincipal extends JFrame {
         menu.setBackground(ColoresBlaugrana.GRANATE);
         menu.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
 
-        agregarSeccion(menu, "INICIO");
-        agregarOpcion(menu, "Dashboard", "dashboard");
-
-        agregarSeccion(menu, "CLUB");
-        agregarOpcion(menu, "Jugadores", "jugadores");
-        agregarOpcion(menu, "Personal", "personal");
-        agregarOpcion(menu, "Contratos", "contratos");
-
-        agregarSeccion(menu, "DEPORTIVO");
-        agregarOpcion(menu, "Partidos", "partidos");
-        agregarOpcion(menu, "Rendimiento", "rendimiento");
-        agregarOpcion(menu, "Bonificaciones", "bonificaciones");
-
-        agregarSeccion(menu, "FINANZAS");
-        agregarOpcion(menu, "Pagos", "pagos");
-        agregarOpcion(menu, "Ingresos", "ingresos");
-        agregarOpcion(menu, "Egresos", "egresos");
-        agregarOpcion(menu, "Presupuesto", "presupuesto");
-
-        agregarSeccion(menu, "REPORTES");
-        agregarOpcion(menu, "Reportes", "reportes");
-
-        if (SesionUsuario.esAdministrador()) {
-            agregarSeccion(menu, "ADMINISTRACION");
-            agregarOpcion(menu, "Usuarios", "usuarios");
-        }
+        agregarGrupo(menu, "INICIO", new String[][]{{"Dashboard", "dashboard"}});
+        agregarGrupo(menu, "CLUB", new String[][]{
+                {"Jugadores", "jugadores"}, {"Personal", "personal"}, {"Contratos", "contratos"}});
+        agregarGrupo(menu, "DEPORTIVO", new String[][]{
+                {"Partidos", "partidos"}, {"Rendimiento", "rendimiento"}, {"Bonificaciones", "bonificaciones"}});
+        agregarGrupo(menu, "FINANZAS", new String[][]{
+                {"Pagos", "pagos"}, {"Ingresos", "ingresos"}, {"Egresos", "egresos"}, {"Presupuesto", "presupuesto"}});
+        agregarGrupo(menu, "REPORTES", new String[][]{{"Reportes", "reportes"}});
+        agregarGrupo(menu, "ADMINISTRACION", new String[][]{{"Usuarios", "usuarios"}});
 
         menu.add(Box.createVerticalGlue());
 
@@ -150,6 +134,25 @@ public class FrmPrincipal extends JFrame {
         scroll.setPreferredSize(new Dimension(210, 0));
         scroll.getVerticalScrollBar().setUnitIncrement(16);
         return scroll;
+    }
+
+    private void agregarGrupo(JPanel menu, String tituloSeccion, String[][] opciones) {
+        boolean hayAlgunaVisible = false;
+        for (String[] opcion : opciones) {
+            if (paneles.containsKey(opcion[1])) {
+                hayAlgunaVisible = true;
+                break;
+            }
+        }
+        if (!hayAlgunaVisible) {
+            return;
+        }
+        agregarSeccion(menu, tituloSeccion);
+        for (String[] opcion : opciones) {
+            if (paneles.containsKey(opcion[1])) {
+                agregarOpcion(menu, opcion[0], opcion[1]);
+            }
+        }
     }
 
     private void agregarSeccion(JPanel menu, String texto) {

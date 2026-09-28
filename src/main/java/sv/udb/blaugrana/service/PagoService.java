@@ -1,12 +1,17 @@
 package sv.udb.blaugrana.service;
 
+import sv.udb.blaugrana.config.ConexionBD;
+import sv.udb.blaugrana.dao.CategoriaEgresoDAO;
 import sv.udb.blaugrana.dao.ContratoDAO;
+import sv.udb.blaugrana.dao.EgresoDAO;
 import sv.udb.blaugrana.dao.PagoDAO;
 import sv.udb.blaugrana.model.Contrato;
+import sv.udb.blaugrana.model.Egreso;
 import sv.udb.blaugrana.model.Pago;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
@@ -17,8 +22,12 @@ import java.util.List;
  */
 public class PagoService {
 
+    private static final String CATEGORIA_EGRESO_SALARIOS = "Salarios";
+
     private final PagoDAO pagoDAO = new PagoDAO();
     private final ContratoDAO contratoDAO = new ContratoDAO();
+    private final EgresoDAO egresoDAO = new EgresoDAO();
+    private final CategoriaEgresoDAO categoriaEgresoDAO = new CategoriaEgresoDAO();
     private final BonificacionService bonificacionService = new BonificacionService();
 
     public List<Pago> listar() throws SQLException {
@@ -35,6 +44,10 @@ public class PagoService {
      * El pago se registra con estado PENDIENTE.
      */
     public Pago generarPago(int idJugador, int idContrato, String periodo, BigDecimal deducciones) throws SQLException {
+        if (pagoDAO.existePagoPorJugadorYPeriodo(idJugador, periodo)) {
+            throw new IllegalStateException("Ya existe un pago registrado para este jugador en el periodo " + periodo + ".");
+        }
+
         Contrato contrato = contratoDAO.buscarPorId(idContrato)
                 .orElseThrow(() -> new IllegalArgumentException("El contrato indicado no existe."));
 
@@ -57,8 +70,40 @@ public class PagoService {
         return pago;
     }
 
+    /**
+     * Marca un pago como PAGADO y, en la misma transaccion, registra el
+     * egreso correspondiente (categoria "Salarios") para que la situacion
+     * financiera del club quede actualizada automaticamente.
+     */
     public void marcarComoPagado(int idPago) throws SQLException {
-        pagoDAO.marcarPagado(idPago, LocalDate.now());
+        try (Connection con = ConexionBD.getConexion()) {
+            con.setAutoCommit(false);
+            try {
+                Pago pago = pagoDAO.buscarPorId(con, idPago)
+                        .orElseThrow(() -> new IllegalArgumentException("El pago indicado no existe."));
+                if (Pago.ESTADO_PAGADO.equals(pago.getEstado())) {
+                    throw new IllegalStateException("Este pago ya estaba marcado como pagado.");
+                }
+
+                LocalDate fechaPago = LocalDate.now();
+                pagoDAO.marcarPagado(con, idPago, fechaPago);
+
+                int idCategoriaSalarios = categoriaEgresoDAO.obtenerOCrear(con, CATEGORIA_EGRESO_SALARIOS);
+                Egreso egreso = new Egreso();
+                egreso.setIdCategoriaEgreso(idCategoriaSalarios);
+                egreso.setDescripcion("Pago de salario - " + pago.getNombreJugador() + " - periodo " + pago.getPeriodo());
+                egreso.setMonto(pago.getTotal());
+                egreso.setFecha(fechaPago);
+                egresoDAO.insertar(con, egreso);
+
+                con.commit();
+            } catch (RuntimeException | SQLException ex) {
+                con.rollback();
+                throw ex;
+            } finally {
+                con.setAutoCommit(true);
+            }
+        }
     }
 
     public void eliminar(int idPago) throws SQLException {

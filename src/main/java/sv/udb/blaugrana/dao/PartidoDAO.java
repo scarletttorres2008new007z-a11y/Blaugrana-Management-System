@@ -32,8 +32,13 @@ public class PartidoDAO {
     }
 
     public Optional<Partido> buscarPorId(int idPartido) throws SQLException {
-        try (Connection con = ConexionBD.getConexion();
-             PreparedStatement ps = con.prepareStatement(SELECT_BASE + " WHERE id_partido = ?")) {
+        try (Connection con = ConexionBD.getConexion()) {
+            return buscarPorId(con, idPartido);
+        }
+    }
+
+    public Optional<Partido> buscarPorId(Connection con, int idPartido) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement(SELECT_BASE + " WHERE id_partido = ?")) {
             ps.setInt(1, idPartido);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {

@@ -3,7 +3,9 @@ package sv.udb.blaugrana.view.jugadores;
 import sv.udb.blaugrana.model.Jugador;
 import sv.udb.blaugrana.service.JugadorService;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
+import sv.udb.blaugrana.util.FiltroTabla;
 import sv.udb.blaugrana.util.Mensajes;
+import sv.udb.blaugrana.util.PermisosUI;
 import sv.udb.blaugrana.util.Validaciones;
 import sv.udb.blaugrana.view.Refrescable;
 
@@ -28,6 +30,7 @@ public class JugadoresPanel extends JPanel implements Refrescable {
         }
     };
     private final JTable tabla = new JTable(modeloTabla);
+    private final JTextField txtBuscar = new JTextField(20);
 
     private final JTextField txtNumero = new JTextField(4);
     private final JTextField txtNombre = new JTextField(14);
@@ -49,7 +52,7 @@ public class JugadoresPanel extends JPanel implements Refrescable {
         JLabel titulo = new JLabel("PLANTILLA - Gestion de jugadores del primer equipo");
         titulo.setFont(new Font("SansSerif", Font.BOLD, 18));
         titulo.setForeground(ColoresBlaugrana.AZUL_OSCURO);
-        add(titulo, BorderLayout.NORTH);
+        add(construirEncabezado(titulo), BorderLayout.NORTH);
 
         tabla.setRowHeight(24);
         tabla.getSelectionModel().addListSelectionListener(e -> {
@@ -57,8 +60,19 @@ public class JugadoresPanel extends JPanel implements Refrescable {
                 cargarSeleccion();
             }
         });
+        FiltroTabla.activarBusqueda(txtBuscar, tabla, modeloTabla);
         add(new JScrollPane(tabla), BorderLayout.CENTER);
         add(construirFormulario(), BorderLayout.SOUTH);
+    }
+
+    private JPanel construirEncabezado(JLabel titulo) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.add(titulo, BorderLayout.NORTH);
+        JPanel panelBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panelBusqueda.add(new JLabel("Buscar:"));
+        panelBusqueda.add(txtBuscar);
+        panel.add(panelBusqueda, BorderLayout.SOUTH);
+        return panel;
     }
 
     private JPanel construirFormulario() {
@@ -89,6 +103,7 @@ public class JugadoresPanel extends JPanel implements Refrescable {
         btnGuardar.addActionListener(e -> guardar());
         btnEliminar.addActionListener(e -> eliminar());
         btnRefrescar.addActionListener(e -> refrescar());
+        PermisosUI.deshabilitarSiSoloLectura(btnGuardar, btnEliminar);
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         panelBotones.add(btnNuevo);
@@ -122,7 +137,7 @@ public class JugadoresPanel extends JPanel implements Refrescable {
         if (fila < 0) {
             return;
         }
-        idSeleccionado = (Integer) modeloTabla.getValueAt(fila, 0);
+        idSeleccionado = (Integer) modeloTabla.getValueAt(tabla.convertRowIndexToModel(fila), 0);
         try {
             jugadorService.buscarPorId(idSeleccionado).ifPresent(j -> {
                 txtNumero.setText(String.valueOf(j.getNumeroCamiseta()));
@@ -136,7 +151,7 @@ public class JugadoresPanel extends JPanel implements Refrescable {
                 cmbEstado.setSelectedItem(j.getEstado());
             });
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar el jugador:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar el jugador", e);
         }
     }
 
@@ -183,8 +198,10 @@ public class JugadoresPanel extends JPanel implements Refrescable {
             Mensajes.error(this, "El numero de camiseta debe ser un valor numerico.");
         } catch (DateTimeParseException e) {
             Mensajes.error(this, "Las fechas deben tener el formato yyyy-mm-dd.");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            Mensajes.error(this, e.getMessage());
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo guardar el jugador:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo guardar el jugador", e);
         }
     }
 
@@ -201,7 +218,7 @@ public class JugadoresPanel extends JPanel implements Refrescable {
             limpiarFormulario();
             refrescar();
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo eliminar el jugador:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo eliminar el jugador", e);
         }
     }
 
@@ -222,7 +239,7 @@ public class JugadoresPanel extends JPanel implements Refrescable {
                         j.getPosicion(), j.getNacionalidad(), j.getEstado()});
             }
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar la plantilla:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar la plantilla", e);
         }
     }
 }

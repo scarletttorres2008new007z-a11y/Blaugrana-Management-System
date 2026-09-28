@@ -19,9 +19,14 @@ public class ParticipacionPartidoDAO {
             "FROM PARTICIPACION_PARTIDO pp JOIN JUGADOR j ON j.id_jugador = pp.id_jugador";
 
     public List<ParticipacionPartido> listarPorPartido(int idPartido) throws SQLException {
+        try (Connection con = ConexionBD.getConexion()) {
+            return listarPorPartido(con, idPartido);
+        }
+    }
+
+    public List<ParticipacionPartido> listarPorPartido(Connection con, int idPartido) throws SQLException {
         List<ParticipacionPartido> lista = new ArrayList<>();
-        try (Connection con = ConexionBD.getConexion();
-             PreparedStatement ps = con.prepareStatement(SELECT_BASE + " WHERE pp.id_partido = ? ORDER BY j.numero_camiseta")) {
+        try (PreparedStatement ps = con.prepareStatement(SELECT_BASE + " WHERE pp.id_partido = ? ORDER BY j.numero_camiseta")) {
             ps.setInt(1, idPartido);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -30,6 +35,18 @@ public class ParticipacionPartidoDAO {
             }
         }
         return lista;
+    }
+
+    public boolean existeParticipacion(int idPartido, int idJugador) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM PARTICIPACION_PARTIDO WHERE id_partido = ? AND id_jugador = ?";
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idPartido);
+            ps.setInt(2, idJugador);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
     }
 
     public int sumarGolesPorJugador(int idJugador) throws SQLException {

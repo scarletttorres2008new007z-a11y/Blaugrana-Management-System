@@ -8,6 +8,7 @@ import sv.udb.blaugrana.service.PartidoService;
 import sv.udb.blaugrana.service.RendimientoService;
 import sv.udb.blaugrana.util.ColoresBlaugrana;
 import sv.udb.blaugrana.util.Mensajes;
+import sv.udb.blaugrana.util.PermisosUI;
 import sv.udb.blaugrana.view.Refrescable;
 
 import javax.swing.*;
@@ -99,6 +100,7 @@ public class RendimientoPanel extends JPanel implements Refrescable {
         btnNuevo.addActionListener(e -> limpiarFormulario());
         btnGuardar.addActionListener(e -> guardar());
         btnEliminar.addActionListener(e -> eliminar());
+        PermisosUI.deshabilitarSiSoloLectura(btnGuardar, btnEliminar);
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         panelBotones.add(btnNuevo);
@@ -179,8 +181,10 @@ public class RendimientoPanel extends JPanel implements Refrescable {
             cargarParticipaciones();
         } catch (NumberFormatException e) {
             Mensajes.error(this, "Minutos, goles, asistencias y tarjetas deben ser numeros.");
+        } catch (IllegalStateException e) {
+            Mensajes.error(this, e.getMessage());
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo guardar la participacion:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo guardar la participacion", e);
         }
     }
 
@@ -194,7 +198,7 @@ public class RendimientoPanel extends JPanel implements Refrescable {
             limpiarFormulario();
             cargarParticipaciones();
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo eliminar el registro:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo eliminar el registro", e);
         }
     }
 
@@ -211,7 +215,7 @@ public class RendimientoPanel extends JPanel implements Refrescable {
                         p.getGoles(), p.getAsistencias(), p.getTarjetasAmarillas(), p.getTarjetasRojas(), p.isTitular()});
             }
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar la participacion del partido:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar la participacion del partido", e);
         }
     }
 
@@ -238,7 +242,7 @@ public class RendimientoPanel extends JPanel implements Refrescable {
             limpiarFormulario();
             cargarParticipaciones();
         } catch (SQLException e) {
-            Mensajes.error(this, "No se pudo cargar la informacion de rendimiento:\n" + e.getMessage());
+            Mensajes.error(this, "No se pudo cargar la informacion de rendimiento", e);
         }
     }
 }
