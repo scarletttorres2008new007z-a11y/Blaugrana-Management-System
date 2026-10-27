@@ -258,7 +258,7 @@ public class RendimientoPanel extends JPanel implements Refrescable {
             cargarParticipaciones();
         } catch (NumberFormatException e) {
             Mensajes.error(this, "Minutos, goles, asistencias y tarjetas deben ser numeros.");
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             Mensajes.error(this, e.getMessage());
         } catch (SQLException e) {
             Mensajes.error(this, "No se pudo guardar la participacion", e);

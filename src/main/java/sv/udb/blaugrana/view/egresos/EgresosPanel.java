@@ -211,6 +211,8 @@ public class EgresosPanel extends JPanel implements Refrescable {
             Mensajes.error(this, "La fecha debe tener el formato yyyy-mm-dd.");
         } catch (NumberFormatException e) {
             Mensajes.error(this, "El monto debe ser un valor numerico.");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            Mensajes.error(this, e.getMessage());
         } catch (SQLException e) {
             Mensajes.error(this, "No se pudo guardar el egreso", e);
         }

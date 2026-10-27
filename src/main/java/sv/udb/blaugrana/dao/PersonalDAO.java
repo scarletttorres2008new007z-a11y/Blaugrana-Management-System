@@ -38,6 +38,21 @@ public class PersonalDAO {
         }
     }
 
+    public boolean existeDocumento(String documento, Integer idPersonalExcluir) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM PERSONAL WHERE documento = ?"
+                + (idPersonalExcluir != null ? " AND id_personal <> ?" : "");
+        try (Connection con = ConexionBD.getConexion();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, documento);
+            if (idPersonalExcluir != null) {
+                ps.setInt(2, idPersonalExcluir);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
     public void insertar(Personal personal) throws SQLException {
         String sql = "INSERT INTO PERSONAL (nombre, apellido, documento, cargo, area, fecha_nacimiento, " +
                 "nacionalidad, fecha_ingreso, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";

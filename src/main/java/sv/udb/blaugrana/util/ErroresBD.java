@@ -29,6 +29,12 @@ public final class ErroresBD {
             return "Este jugador ya tiene un contrato vigente. Finalice o rescinda el contrato "
                     + "actual antes de crear uno nuevo.";
         }
+        if (mensaje.contains("UQ_PARTIDO_UNICO")) {
+            return "Ya existe un partido registrado con esa competición, fecha, rival y condición.";
+        }
+        if (mensaje.contains("UX_PERSONAL_DOCUMENTO")) {
+            return "Ya existe un miembro del personal registrado con ese documento.";
+        }
         if (mensaje.contains("CK_JUGADOR_CAMISETA")) {
             return "El número de camiseta debe estar entre 1 y 99.";
         }
@@ -41,11 +47,48 @@ public final class ErroresBD {
         if (mensaje.contains("CK_CONTRATO_SALARIO")) {
             return "El salario base del contrato debe ser mayor que cero.";
         }
+        if (mensaje.contains("CK_CONTRATO_ESTADO")) {
+            return "El estado del contrato debe ser VIGENTE, FINALIZADO o RESCINDIDO.";
+        }
+        if (mensaje.contains("CK_PARTIDO_GOLES")) {
+            return "Los goles a favor y en contra no pueden ser negativos.";
+        }
+        if (mensaje.contains("CK_PARTIDO_CONDICION")) {
+            return "La condición del partido debe ser LOCAL o VISITANTE.";
+        }
+        if (mensaje.contains("CK_PARTIDO_ESTADO")) {
+            return "El estado del partido debe ser PROGRAMADO o FINALIZADO.";
+        }
+        if (mensaje.contains("CK_PARTIDO_RESULTADO")) {
+            return "El resultado del partido debe ser GANADO, PERDIDO o EMPATADO.";
+        }
+        if (mensaje.contains("CK_PARTICIPACION_VALORES")) {
+            return "Los minutos (0-130), goles, asistencias o tarjetas (amarillas 0-2, rojas 0-1) "
+                    + "tienen un valor fuera de rango.";
+        }
+        if (mensaje.contains("CK_BONIFICACION_VALOR")) {
+            return "El valor de la bonificación debe ser mayor que cero.";
+        }
+        if (mensaje.contains("CK_PAGO_MONTOS")) {
+            return "El salario, las bonificaciones y las deducciones del pago no pueden ser negativos.";
+        }
+        if (mensaje.contains("CK_PAGO_ESTADO")) {
+            return "El estado del pago debe ser PENDIENTE o PAGADO.";
+        }
         if (mensaje.contains("CK_PAGO_TOTAL")) {
             return "El total del pago no coincide con salario + bonificaciones - deducciones.";
         }
-        if (mensaje.contains("CK_PARTICIPACION_VALORES")) {
-            return "Los minutos, goles, asistencias o tarjetas tienen un valor fuera de rango.";
+        if (mensaje.contains("CK_INGRESO_MONTO")) {
+            return "El monto del ingreso debe ser mayor que cero.";
+        }
+        if (mensaje.contains("CK_EGRESO_MONTO")) {
+            return "El monto del egreso debe ser mayor que cero.";
+        }
+        if (mensaje.contains("CK_DETALLE_MONTOS")) {
+            return "Los montos presupuestado y ejecutado no pueden ser negativos.";
+        }
+        if (mensaje.contains("CK_USUARIO_ESTADO")) {
+            return "El estado del usuario debe ser ACTIVO o INACTIVO.";
         }
 
         // Patrones genericos de SQL Server

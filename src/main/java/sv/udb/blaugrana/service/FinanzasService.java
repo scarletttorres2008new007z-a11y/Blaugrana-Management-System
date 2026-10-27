@@ -37,6 +37,16 @@ public class FinanzasService {
     }
 
     public void guardarIngreso(Ingreso ingreso) throws SQLException {
+        if (ingreso.getIdCategoriaIngreso() <= 0) {
+            throw new IllegalArgumentException("Debe seleccionar una categoría de ingreso.");
+        }
+        if (ingreso.getMonto() == null || ingreso.getMonto().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("El monto del ingreso debe ser mayor que cero.");
+        }
+        if (ingreso.getFecha() == null) {
+            throw new IllegalArgumentException("La fecha del ingreso es obligatoria.");
+        }
+
         if (ingreso.getIdIngreso() == 0) {
             ingresoDAO.insertar(ingreso);
         } else {
@@ -49,6 +59,16 @@ public class FinanzasService {
     }
 
     public void guardarEgreso(Egreso egreso) throws SQLException {
+        if (egreso.getIdCategoriaEgreso() <= 0) {
+            throw new IllegalArgumentException("Debe seleccionar una categoría de egreso.");
+        }
+        if (egreso.getMonto() == null || egreso.getMonto().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("El monto del egreso debe ser mayor que cero.");
+        }
+        if (egreso.getFecha() == null) {
+            throw new IllegalArgumentException("La fecha del egreso es obligatoria.");
+        }
+
         if (egreso.getIdEgreso() == 0) {
             egresoDAO.insertar(egreso);
         } else {

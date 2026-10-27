@@ -31,6 +31,19 @@ public class RendimientoService {
     }
 
     public void guardar(ParticipacionPartido participacion) throws SQLException {
+        if (participacion.getMinutosJugados() < 0 || participacion.getMinutosJugados() > 130) {
+            throw new IllegalArgumentException("Los minutos jugados deben estar entre 0 y 130.");
+        }
+        if (participacion.getGoles() < 0 || participacion.getAsistencias() < 0) {
+            throw new IllegalArgumentException("Los goles y las asistencias no pueden ser negativos.");
+        }
+        if (participacion.getTarjetasAmarillas() < 0 || participacion.getTarjetasAmarillas() > 2) {
+            throw new IllegalArgumentException("Las tarjetas amarillas deben estar entre 0 y 2.");
+        }
+        if (participacion.getTarjetasRojas() < 0 || participacion.getTarjetasRojas() > 1) {
+            throw new IllegalArgumentException("Las tarjetas rojas deben estar entre 0 y 1.");
+        }
+
         if (participacion.getIdParticipacion() == 0) {
             if (participacionDAO.existeParticipacion(participacion.getIdPartido(), participacion.getIdJugador())) {
                 throw new IllegalStateException("Este jugador ya tiene una participación registrada en este partido.");

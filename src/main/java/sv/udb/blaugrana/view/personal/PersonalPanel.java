@@ -212,6 +212,8 @@ public class PersonalPanel extends JPanel implements Refrescable {
             refrescar();
         } catch (DateTimeParseException e) {
             Mensajes.error(this, "La fecha de ingreso debe tener el formato yyyy-mm-dd.");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            Mensajes.error(this, e.getMessage());
         } catch (SQLException e) {
             Mensajes.error(this, "No se pudo guardar el registro", e);
         }

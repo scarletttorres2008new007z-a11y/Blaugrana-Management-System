@@ -163,6 +163,8 @@ public class PresupuestoPanel extends JPanel implements Refrescable {
             txtTemporada.setText("");
             txtNombrePresupuesto.setText("");
             refrescar();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            Mensajes.error(this, e.getMessage());
         } catch (SQLException e) {
             Mensajes.error(this, "No se pudo crear el presupuesto", e);
         }
@@ -192,6 +194,8 @@ public class PresupuestoPanel extends JPanel implements Refrescable {
             cargarDetalle();
         } catch (NumberFormatException e) {
             Mensajes.error(this, "Los montos deben ser numericos.");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            Mensajes.error(this, e.getMessage());
         } catch (SQLException e) {
             Mensajes.error(this, "No se pudo agregar el detalle", e);
         }

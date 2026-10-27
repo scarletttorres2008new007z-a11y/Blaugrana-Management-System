@@ -2,12 +2,16 @@ package sv.udb.blaugrana.service;
 
 import sv.udb.blaugrana.dao.PartidoDAO;
 import sv.udb.blaugrana.model.Partido;
+import sv.udb.blaugrana.util.Validaciones;
 
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class PartidoService {
+
+    private static final Set<String> CONDICIONES_VALIDAS = Set.of(Partido.CONDICION_LOCAL, Partido.CONDICION_VISITANTE);
 
     private final PartidoDAO partidoDAO = new PartidoDAO();
 
@@ -52,6 +56,19 @@ public class PartidoService {
     }
 
     public void guardar(Partido partido) throws SQLException {
+        if (Validaciones.esVacio(partido.getCompeticion()) || Validaciones.esVacio(partido.getRival())) {
+            throw new IllegalArgumentException("La competición y el rival son obligatorios.");
+        }
+        if (partido.getFecha() == null) {
+            throw new IllegalArgumentException("La fecha del partido es obligatoria.");
+        }
+        if (!CONDICIONES_VALIDAS.contains(partido.getCondicion())) {
+            throw new IllegalArgumentException("La condición debe ser LOCAL o VISITANTE.");
+        }
+        if (partido.getGolesFavor() < 0 || partido.getGolesContra() < 0) {
+            throw new IllegalArgumentException("Los goles a favor y en contra no pueden ser negativos.");
+        }
+
         if (Partido.ESTADO_FINALIZADO.equals(partido.getEstado())) {
             calcularResultado(partido);
         }
